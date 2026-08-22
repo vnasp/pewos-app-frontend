@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Appointment } from "../../types";
-import { appointmentTypeColors } from "../../context/CalendarContext";
+import { appointmentTypeColors } from "../../constants/labels";
+import { parseLocalDate } from "../../utils/date";
 
 interface CalendarMonthViewProps {
   appointments: Appointment[];
@@ -51,7 +52,7 @@ export default function CalendarMonthView({
   const byDay = useMemo(() => {
     const map: Record<number, Appointment[]> = {};
     appointments.forEach((a) => {
-      const d = new Date(a.date);
+      const d = parseLocalDate(a.date);
       if (d.getFullYear() === year && d.getMonth() === month) {
         const key = d.getDate();
         if (!map[key]) map[key] = [];

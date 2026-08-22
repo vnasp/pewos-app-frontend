@@ -3,7 +3,7 @@ import type { Appointment, Medication, Exercise, Care } from "../../types";
 export type AppointmentEvent = {
   type: "appointment";
   id: string;
-  dogName: string;
+  petName: string;
   time: string;
   data: Appointment;
 };
@@ -11,7 +11,7 @@ export type AppointmentEvent = {
 export type MedicationEvent = {
   type: "medication";
   id: string;
-  dogName: string;
+  petName: string;
   time: string;
   medicationId: string;
   scheduledTime: string;
@@ -21,7 +21,7 @@ export type MedicationEvent = {
 export type ExerciseEvent = {
   type: "exercise";
   id: string;
-  dogName: string;
+  petName: string;
   time: string;
   exerciseId: string;
   scheduledTime: string;
@@ -31,7 +31,7 @@ export type ExerciseEvent = {
 export type CareEvent = {
   type: "care";
   id: string;
-  dogName: string;
+  petName: string;
   time: string;
   careId: string;
   scheduledTime: string;

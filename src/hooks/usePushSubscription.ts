@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { supabase } from "../utils/supabase";
+
+import * as apiClient from "../api";
 import { useAuth } from "../context/AuthContext";
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
@@ -12,8 +13,11 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 /**
- * Suscribe al usuario a Web Push y guarda la suscripción en Supabase.
- * Funciona en iOS Safari 16.4+ (Add to Home Screen) y Android Chrome.
+ * Suscribe el dispositivo a Web Push y registra la suscripción en la API.
+ * Funciona en iOS Safari 16.4+ (Agregar a inicio) y Android Chrome.
+ *
+ * La suscripción es del dispositivo, no del grupo: el backend le manda los avisos de
+ * todos los grupos a los que pertenece esta cuenta.
  */
 export function usePushSubscription() {
   const { user } = useAuth();
@@ -25,34 +29,28 @@ export function usePushSubscription() {
 
     (async () => {
       try {
-        const reg = await navigator.serviceWorker.ready;
-
-        let subscription = await reg.pushManager.getSubscription();
+        const registration = await navigator.serviceWorker.ready;
+        let subscription = await registration.pushManager.getSubscription();
 
         if (!subscription) {
-          subscription = await reg.pushManager.subscribe({
+          subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
               .buffer as ArrayBuffer,
           });
         }
 
-        // Guardar/actualizar en Supabase (tabla sin tipos generados aún)
-        const sub = subscription.toJSON();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const db = supabase as any;
-        await db.from("pet_push_subscriptions").upsert(
-          {
-            user_id: user.id,
-            endpoint: sub.endpoint,
-            p256dh: (sub.keys as { p256dh: string; auth: string }).p256dh,
-            auth: (sub.keys as { p256dh: string; auth: string }).auth,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id" },
-        );
+        const { endpoint, keys } = subscription.toJSON() as {
+          endpoint: string;
+          keys: { p256dh: string; auth: string };
+        };
+        await apiClient.push.subscribe({
+          endpoint,
+          p256dh: keys.p256dh,
+          auth: keys.auth,
+        });
       } catch (err) {
-        // Falla silenciosa — el usuario puede no haberlo instalado aún
+        // Falla silenciosa: puede que la app no esté instalada todavía.
         console.warn("[PushSubscription]", err);
       }
     })();

@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
-import { useCare, careTypeLabels } from "../context/CareContext";
-import { calculateScheduledTimes } from "../context/ExerciseContext";
-import { useDogs } from "../context/DogsContext";
-import { formatLocalDate, parseLocalDate } from "../utils/supabase";
+import { calculateScheduledTimes } from "../utils/schedule";
+import { formatLocalDate, parseLocalDate, shortTime, today } from "../utils/date";
 import type { CareType, NotificationTime } from "../types";
+import { careTypeLabels } from "../constants/labels";
+import { useCares, usePets } from "../hooks/queries";
 
 interface AddEditCareScreenProps {
   careId?: string;
@@ -33,48 +33,48 @@ export default function AddEditCareScreen({
   careId,
   onNavigateBack,
 }: AddEditCareScreenProps) {
-  const { addCare, updateCare, getCareById } = useCare();
-  const { dogs } = useDogs();
+  const { create, update, byId } = useCares();
+  const { items: pets } = usePets();
   const isEditing = !!careId;
-  const existing = careId ? getCareById(careId) : undefined;
+  const existing = careId ? byId(careId) : undefined;
 
-  const [selectedDogId, setSelectedDogId] = useState(
-    existing?.dogId ?? dogs[0]?.id ?? "",
+  const [selectedPetId, setSelectedDogId] = useState(
+    existing?.pet_id ?? pets[0]?.id ?? "",
   );
   const [type, setType] = useState<CareType>(
     existing?.type ?? "limpieza_herida",
   );
   const [customTypeDescription, setCustomTypeDescription] = useState(
-    existing?.customTypeDescription ?? "",
+    existing?.custom_type_description ?? "",
   );
   const [durationMinutes, setDurationMinutes] = useState(
-    existing?.durationMinutes?.toString() ?? "15",
+    existing?.duration_minutes?.toString() ?? "15",
   );
   const [timesPerDay, setTimesPerDay] = useState(
-    existing?.timesPerDay?.toString() ?? "1",
+    existing?.times_per_day?.toString() ?? "1",
   );
-  const [startTime, setStartTime] = useState(existing?.startTime ?? "08:00");
-  const [endTime, setEndTime] = useState(existing?.endTime ?? "21:00");
-  const [startDate, setStartDate] = useState(
-    existing?.startDate
-      ? formatLocalDate(new Date(existing.startDate))
-      : formatLocalDate(new Date()),
+  const [startTime, setStartTime] = useState(
+    shortTime(existing?.start_time) || "08:00",
   );
+  const [endTime, setEndTime] = useState(
+    shortTime(existing?.end_time) || "21:00",
+  );
+  const [startDate, setStartDate] = useState(existing?.start_date ?? today());
   const [isPermanent, setIsPermanent] = useState(
-    existing?.isPermanent ?? false,
+    existing?.is_permanent ?? false,
   );
   const [durationDays, setDurationDays] = useState(
-    existing?.durationDays?.toString() ?? "14",
+    existing?.duration_days?.toString() ?? "14",
   );
   const [notes, setNotes] = useState(existing?.notes ?? "");
   const [notificationTime, setNotificationTime] = useState<NotificationTime>(
-    existing?.notificationTime ?? "15min",
+    existing?.notification_time ?? "15min",
   );
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>(
-    existing?.daysOfWeek ?? [],
+    existing?.days_of_week ?? [],
   );
   const [scheduledTimes, setScheduledTimes] = useState<string[]>(
-    existing?.scheduledTimes ?? [],
+    existing?.scheduled_times?.map(shortTime) ?? [],
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +87,7 @@ export default function AddEditCareScreen({
   }, [startTime, endTime, timesPerDay]);
 
   const handleSave = async () => {
-    if (!selectedDogId) {
+    if (!selectedPetId) {
       setError("Selecciona una mascota");
       return;
     }
@@ -113,34 +113,33 @@ export default function AddEditCareScreen({
     setError(null);
     setSaving(true);
     try {
-      const selectedDog = dogs.find((d) => d.id === selectedDogId)!;
-      let endDate: Date | undefined;
+      let endDate: string | undefined;
       if (!isPermanent) {
-        endDate = parseLocalDate(startDate);
-        endDate.setDate(endDate.getDate() + days - 1);
+        const d = parseLocalDate(startDate);
+        d.setDate(d.getDate() + days - 1);
+        endDate = formatLocalDate(d);
       }
       const data = {
-        dogId: selectedDogId,
-        dogName: selectedDog.name,
+        pet_id: selectedPetId,
         type,
-        customTypeDescription:
+        custom_type_description:
           type === "otro" ? customTypeDescription.trim() : undefined,
-        durationMinutes: dur,
-        timesPerDay: times,
-        startTime,
-        endTime,
-        scheduledTimes,
-        startDate: parseLocalDate(startDate),
-        isPermanent,
-        durationDays: isPermanent ? undefined : days,
-        endDate,
+        duration_minutes: dur,
+        times_per_day: times,
+        start_time: startTime,
+        end_time: endTime,
+        scheduled_times: scheduledTimes,
+        start_date: startDate,
+        is_permanent: isPermanent,
+        duration_days: isPermanent ? undefined : days,
+        end_date: endDate,
         notes: notes.trim(),
-        isActive: existing?.isActive ?? true,
-        notificationTime,
-        daysOfWeek: daysOfWeek.length > 0 ? daysOfWeek : undefined,
+        is_active: existing?.is_active ?? true,
+        notification_time: notificationTime,
+        days_of_week: daysOfWeek.length > 0 ? daysOfWeek : undefined,
       };
-      if (isEditing && careId) await updateCare(careId, data);
-      else await addCare(data);
+      if (isEditing && careId) await update.mutateAsync({ id: careId, data: data });
+      else await create.mutateAsync(data);
       onNavigateBack();
     } catch {
       setError("No se pudo guardar");
@@ -170,13 +169,13 @@ export default function AddEditCareScreen({
             Mascota
           </label>
           <div className="flex flex-wrap gap-2">
-            {dogs.map((dog) => (
+            {pets.map((pet) => (
               <button
-                key={dog.id}
-                onClick={() => setSelectedDogId(dog.id)}
-                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${selectedDogId === dog.id ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
+                key={pet.id}
+                onClick={() => setSelectedDogId(pet.id)}
+                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${selectedPetId === pet.id ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
               >
-                {dog.name}
+                {pet.name}
               </button>
             ))}
           </div>

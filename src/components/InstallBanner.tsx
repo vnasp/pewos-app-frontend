@@ -3,11 +3,9 @@ import { X, Share, PlusSquare, Download } from "lucide-react";
 
 type Platform = "ios-safari" | "chromium" | "other";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getPrompt = () => (window as any).__pwaPrompt ?? null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getPrompt = () => window.__pwaPrompt ?? null;
 const clearPrompt = () => {
-  (window as any).__pwaPrompt = null;
+  window.__pwaPrompt = null;
 };
 
 function detectPlatform(): Platform {

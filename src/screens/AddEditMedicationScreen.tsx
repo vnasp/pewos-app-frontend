@@ -1,39 +1,13 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Clock, Utensils } from "lucide-react";
-import { useMedication } from "../context/MedicationContext";
-import { useMealTimes } from "../context/MealTimesContext";
-import { useDogs } from "../context/DogsContext";
-import { formatLocalDate, parseLocalDate } from "../utils/supabase";
+import { addDays, shortTime, today } from "../utils/date";
+import { calculateTimesFromHours } from "../utils/schedule";
 import type { ScheduleType, NotificationTime } from "../types";
+import { useMealTimes, useMedications, usePets } from "../hooks/queries";
 
 interface AddEditMedicationScreenProps {
   medicationId?: string;
   onNavigateBack: () => void;
-}
-
-/** Calcula tiempos cada N horas desde startTime.
- * Si freqHours >= 24 (ej: 48h = cada 2 días) solo devuelve el horario de inicio,
- * ya que el filtrado por día se hace en HomeScreen. */
-function calcTimesFromHours(startTime: string, freqHours: number): string[] {
-  if (freqHours >= 24) return [startTime];
-  const [h, m] = startTime.split(":").map(Number);
-  const times: string[] = [];
-  let cur = h * 60 + m;
-  while (cur < 24 * 60) {
-    const hh = Math.floor(cur / 60)
-      .toString()
-      .padStart(2, "0");
-    const mm = (cur % 60).toString().padStart(2, "0");
-    times.push(`${hh}:${mm}`);
-    cur += freqHours * 60;
-  }
-  return times;
-}
-
-function addDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days - 1);
-  return d;
 }
 
 const notificationOptions: { value: NotificationTime; label: string }[] = [
@@ -49,62 +23,59 @@ export default function AddEditMedicationScreen({
   medicationId,
   onNavigateBack,
 }: AddEditMedicationScreenProps) {
-  const { addMedication, updateMedication, getMedicationById } =
-    useMedication();
-  const { mealTimes } = useMealTimes();
-  const { dogs } = useDogs();
+  const { create, update, byId } = useMedications();
+  const { items: mealTimes } = useMealTimes();
+  const { items: pets } = usePets();
   const isEditing = !!medicationId;
-  const existing = medicationId ? getMedicationById(medicationId) : undefined;
+  const existing = medicationId ? byId(medicationId) : undefined;
 
-  const [selectedDogId, setSelectedDogId] = useState(
-    existing?.dogId ?? dogs[0]?.id ?? "",
+  const [selectedPetId, setSelectedDogId] = useState(
+    existing?.pet_id ?? pets[0]?.id ?? "",
   );
   const [name, setName] = useState(existing?.name ?? "");
   const [dosage, setDosage] = useState(existing?.dosage ?? "");
   const [scheduleType, setScheduleType] = useState<ScheduleType>(
-    existing?.scheduleType ?? "hours",
+    existing?.schedule_type ?? "hours",
   );
   const [frequencyHours, setFrequencyHours] = useState(
-    existing?.frequencyHours?.toString() ?? "8",
+    existing?.frequency_hours?.toString() ?? "8",
   );
-  const [startTime, setStartTime] = useState(existing?.startTime ?? "08:00");
+  const [startTime, setStartTime] = useState(
+    shortTime(existing?.start_time) || "08:00",
+  );
   const [selectedMealIds, setSelectedMealIds] = useState<string[]>(
-    existing?.mealIds ?? [],
+    existing?.meal_time_ids ?? [],
   );
   const [durationDays, setDurationDays] = useState(
-    existing?.durationDays.toString() ?? "30",
+    existing?.duration_days?.toString() ?? "30",
   );
-  const [startDate, setStartDate] = useState(
-    existing?.startDate
-      ? formatLocalDate(new Date(existing.startDate))
-      : formatLocalDate(new Date()),
-  );
+  const [startDate, setStartDate] = useState(existing?.start_date ?? today());
   const [notes, setNotes] = useState(existing?.notes ?? "");
   const [notificationTime, setNotificationTime] = useState<NotificationTime>(
-    existing?.notificationTime ?? "15min",
+    existing?.notification_time ?? "15min",
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Calcular scheduled times y end date
   const [scheduledTimes, setScheduledTimes] = useState<string[]>(
-    existing?.scheduledTimes ?? [],
+    existing?.scheduled_times?.map(shortTime) ?? [],
   );
-  const [endDate, setEndDate] = useState<Date>(new Date());
+  const [endDate, setEndDate] = useState<string>(today());
 
   useEffect(() => {
     const dur = parseInt(durationDays);
     if (!isNaN(dur) && dur >= 0) {
-      setEndDate(addDays(parseLocalDate(startDate), dur > 0 ? dur : 1));
+      setEndDate(addDays(startDate, (dur > 0 ? dur : 1) - 1));
     }
     if (scheduleType === "hours") {
       const freq = parseInt(frequencyHours);
       if (!isNaN(freq) && freq > 0)
-        setScheduledTimes(calcTimesFromHours(startTime, freq));
+        setScheduledTimes(calculateTimesFromHours(startTime, freq));
     } else {
       const times = mealTimes
         .filter((m) => selectedMealIds.includes(m.id))
-        .map((m) => m.time)
+        .map((m) => shortTime(m.time))
         .sort();
       setScheduledTimes(times);
     }
@@ -125,7 +96,7 @@ export default function AddEditMedicationScreen({
   };
 
   const handleSave = async () => {
-    if (!selectedDogId) {
+    if (!selectedPetId) {
       setError("Selecciona una mascota");
       return;
     }
@@ -155,28 +126,25 @@ export default function AddEditMedicationScreen({
     setError(null);
     setSaving(true);
     try {
-      const selectedDog = dogs.find((d) => d.id === selectedDogId)!;
       const data = {
-        dogId: selectedDogId,
-        dogName: selectedDog.name,
+        pet_id: selectedPetId,
         name: name.trim(),
         dosage: dosage.trim(),
-        scheduleType,
-        frequencyHours:
+        schedule_type: scheduleType,
+        frequency_hours:
           scheduleType === "hours" ? parseInt(frequencyHours) : undefined,
-        startTime: scheduleType === "hours" ? startTime : undefined,
-        mealIds: scheduleType === "meals" ? selectedMealIds : [],
-        scheduledTimes,
-        durationDays: dur,
-        startDate: parseLocalDate(startDate),
-        endDate,
+        start_time: scheduleType === "hours" ? startTime : undefined,
+        meal_time_ids: scheduleType === "meals" ? selectedMealIds : [],
+        scheduled_times: scheduledTimes,
+        duration_days: dur,
+        start_date: startDate,
+        end_date: endDate,
         notes: notes.trim(),
-        notificationTime,
-        notificationIds: existing?.notificationIds ?? [],
-        isActive: existing?.isActive ?? true,
+        notification_time: notificationTime,
+        is_active: existing?.is_active ?? true,
       };
-      if (isEditing && medicationId) await updateMedication(medicationId, data);
-      else await addMedication(data);
+      if (isEditing && medicationId) await update.mutateAsync({ id: medicationId, data: data });
+      else await create.mutateAsync(data);
       onNavigateBack();
     } catch {
       setError("No se pudo guardar");
@@ -206,13 +174,13 @@ export default function AddEditMedicationScreen({
             Mascota
           </label>
           <div className="flex flex-wrap gap-2">
-            {dogs.map((dog) => (
+            {pets.map((pet) => (
               <button
-                key={dog.id}
-                onClick={() => setSelectedDogId(dog.id)}
-                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${selectedDogId === dog.id ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
+                key={pet.id}
+                onClick={() => setSelectedDogId(pet.id)}
+                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${selectedPetId === pet.id ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
               >
-                {dog.name}
+                {pet.name}
               </button>
             ))}
           </div>
@@ -323,7 +291,7 @@ export default function AddEditMedicationScreen({
                   {meal.name}
                 </span>
                 <span className="ml-auto text-gray-500 text-xs">
-                  {meal.time}
+                  {shortTime(meal.time)}
                 </span>
               </button>
             ))}

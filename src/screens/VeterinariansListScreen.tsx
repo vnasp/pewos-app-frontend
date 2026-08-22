@@ -1,7 +1,7 @@
 import { Stethoscope, Pencil, Trash2, Phone, Mail, MapPin } from "lucide-react";
-import { useVeterinarians } from "../context/VeterinariansContext";
-import { useDogs } from "../context/DogsContext";
 import { useState } from "react";
+import { usePets, useVeterinarians } from "../hooks/queries";
+import { useAuth } from "../context/AuthContext";
 
 interface VeterinariansListScreenProps {
   onNavigateToAddEdit: (vetId?: string) => void;
@@ -10,55 +10,56 @@ interface VeterinariansListScreenProps {
 export default function VeterinariansListScreen({
   onNavigateToAddEdit,
 }: VeterinariansListScreenProps) {
-  const { veterinarians, deleteVeterinarian } = useVeterinarians();
-  const { dogs } = useDogs();
-  const [selectedDogId, setSelectedDogId] = useState<string | null>(null);
+  const { canWrite } = useAuth();
+  const { items: veterinarians, remove } = useVeterinarians();
+  const { items: pets } = usePets();
+  const [selectedPetId, setSelectedDogId] = useState<string | null>(null);
 
   const handleDelete = (id: string, name: string) => {
     if (window.confirm(`¿Eliminar veterinario ${name}?`))
-      deleteVeterinarian(id);
+      remove.mutate(id);
   };
 
-  const filteredVets = selectedDogId
-    ? veterinarians.filter((v) => v.dogId === selectedDogId)
+  const filteredVets = selectedPetId
+    ? veterinarians.filter((v) => v.pet_id === selectedPetId)
     : veterinarians;
 
   // Agrupar por perro
-  const byDog = dogs.map((dog) => ({
-    dog,
-    vets: filteredVets.filter((v) => v.dogId === dog.id),
+  const byPet = pets.map((pet) => ({
+    pet,
+    vets: filteredVets.filter((v) => v.pet_id === pet.id),
   }));
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-6 px-5 pt-6">
       {/* Tabs por perro */}
-      {dogs.length > 1 && (
+      {pets.length > 1 && (
         <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
           <button
             onClick={() => setSelectedDogId(null)}
             className={`px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap transition-colors ${
-              selectedDogId === null
+              selectedPetId === null
                 ? "bg-indigo-600 text-white"
                 : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
           >
             Todos ({veterinarians.length})
           </button>
-          {dogs.map((dog) => {
+          {pets.map((pet) => {
             const count = veterinarians.filter(
-              (v) => v.dogId === dog.id,
+              (v) => v.pet_id === pet.id,
             ).length;
             return (
               <button
-                key={dog.id}
-                onClick={() => setSelectedDogId(dog.id)}
+                key={pet.id}
+                onClick={() => setSelectedDogId(pet.id)}
                 className={`px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap transition-colors ${
-                  selectedDogId === dog.id
+                  selectedPetId === pet.id
                     ? "bg-indigo-600 text-white"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                {dog.name} ({count})
+                {pet.name} ({count})
               </button>
             );
           })}
@@ -77,12 +78,12 @@ export default function VeterinariansListScreen({
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-          {byDog.map(({ dog, vets }) =>
+          {byPet.map(({ pet, vets }) =>
             vets.length === 0 ? null : (
-              <div key={dog.id}>
+              <div key={pet.id}>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-gray-900 text-lg font-bold">
-                    {dog.name}
+                    {pet.name}
                   </span>
                 </div>
                 <div className="flex flex-col gap-3 md:grid md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
@@ -99,26 +100,28 @@ export default function VeterinariansListScreen({
                           <p className="text-gray-900 text-base font-bold mb-0.5 truncate">
                             {vet.name}
                           </p>
-                          {vet.clinicName && (
+                          {vet.clinic_name && (
                             <p className="text-gray-600 text-sm truncate">
-                              {vet.clinicName}
+                              {vet.clinic_name}
                             </p>
                           )}
                         </div>
-                        <div className="flex gap-2 shrink-0">
-                          <button
-                            onClick={() => onNavigateToAddEdit(vet.id)}
-                            className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
-                          >
-                            <Pencil size={16} className="text-indigo-600" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(vet.id, vet.name)}
-                            className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
-                          >
-                            <Trash2 size={16} className="text-red-600" />
-                          </button>
-                        </div>
+                        {canWrite && (
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              onClick={() => onNavigateToAddEdit(vet.id)}
+                              className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
+                            >
+                              <Pencil size={16} className="text-indigo-600" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(vet.id, vet.name)}
+                              className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
+                            >
+                              <Trash2 size={16} className="text-red-600" />
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {/* Información de contacto */}

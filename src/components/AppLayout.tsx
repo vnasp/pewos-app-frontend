@@ -5,11 +5,12 @@ import InstallBanner from "./InstallBanner";
 import { useNotificationScheduler } from "../hooks/useNotificationScheduler";
 import { usePushSubscription } from "../hooks/usePushSubscription";
 import { requestNotificationPermission } from "../utils/notifications";
+import { useAuth } from "../context/AuthContext";
 
 // Screens
 import HomeScreen from "../screens/HomeScreen";
-import DogsListScreen from "../screens/DogsListScreen";
-import AddEditDogScreen from "../screens/AddEditDogScreen";
+import PetsListScreen from "../screens/PetsListScreen";
+import AddEditPetScreen from "../screens/AddEditPetScreen";
 import CalendarListScreen from "../screens/CalendarListScreen";
 import AddEditAppointmentScreen from "../screens/AddEditAppointmentScreen";
 import MedicationsListScreen from "../screens/MedicationsListScreen";
@@ -19,7 +20,7 @@ import AddEditExerciseScreen from "../screens/AddEditExerciseScreen";
 import CaresListScreen from "../screens/CaresListScreen";
 import AddEditCareScreen from "../screens/AddEditCareScreen";
 import MealTimesSettingsScreen from "../screens/MealTimesSettingsScreen";
-import SharedAccessScreen from "../screens/SharedAccessScreen";
+import TenantMembersScreen from "../screens/TenantMembersScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import VeterinariansListScreen from "../screens/VeterinariansListScreen";
 import AddEditVeterinarianScreen from "../screens/AddEditVeterinarianScreen";
@@ -28,13 +29,13 @@ type Tab = "home" | "pets" | "appointments" | "settings";
 
 type SubScreen =
   | { kind: "none" }
-  | { kind: "addEditDog"; dogId?: string }
+  | { kind: "addEditPet"; petId?: string }
   | { kind: "addEditAppointment"; appointmentId?: string }
   | { kind: "addEditMedication"; medicationId?: string }
   | { kind: "addEditExercise"; exerciseId?: string }
   | { kind: "addEditCare"; careId?: string }
   | { kind: "mealTimes" }
-  | { kind: "sharedAccess" }
+  | { kind: "members" }
   | { kind: "medications" }
   | { kind: "exercises" }
   | { kind: "cares" }
@@ -51,13 +52,13 @@ const screenTitles: Record<Tab, { title1: string; title2: string }> = {
 const subScreenTitles: Partial<
   Record<SubScreen["kind"], { title1: string; title2: string }>
 > = {
-  addEditDog: { title1: "Mascota", title2: "" },
+  addEditPet: { title1: "Mascota", title2: "" },
   addEditAppointment: { title1: "Nueva", title2: "Cita" },
   addEditMedication: { title1: "Medica-", title2: "mento" },
   addEditExercise: { title1: "Rutina de", title2: "Ejercicio" },
   addEditCare: { title1: "Cuidado", title2: "Operatorios" },
   mealTimes: { title1: "Horarios de", title2: "Comida" },
-  sharedAccess: { title1: "Acceso", title2: "Compartido" },
+  members: { title1: "Mi", title2: "Grupo" },
   medications: { title1: "Medica-", title2: "mentos" },
   exercises: { title1: "Rutinas de", title2: "Ejercicio" },
   cares: { title1: "Cuidados", title2: "Operatorios" },
@@ -66,6 +67,7 @@ const subScreenTitles: Partial<
 };
 
 export default function AppLayout() {
+  const { canWrite } = useAuth();
   const [currentTab, setCurrentTab] = useState<Tab>("home");
   const [subScreen, setSubScreen] = useState<SubScreen>({ kind: "none" });
 
@@ -101,7 +103,7 @@ export default function AppLayout() {
     subScreen.kind === "veterinarians";
 
   const handleAdd = () => {
-    if (currentTab === "pets") setSubScreen({ kind: "addEditDog" });
+    if (currentTab === "pets") setSubScreen({ kind: "addEditPet" });
     else if (currentTab === "appointments")
       setSubScreen({ kind: "addEditAppointment" });
   };
@@ -117,12 +119,9 @@ export default function AppLayout() {
 
   const renderContent = () => {
     switch (subScreen.kind) {
-      case "addEditDog":
+      case "addEditPet":
         return (
-          <AddEditDogScreen
-            dogId={subScreen.dogId}
-            onNavigateBack={handleBack}
-          />
+          <AddEditPetScreen petId={subScreen.petId} onNavigateBack={handleBack} />
         );
       case "addEditAppointment":
         return (
@@ -154,8 +153,8 @@ export default function AppLayout() {
         );
       case "mealTimes":
         return <MealTimesSettingsScreen />;
-      case "sharedAccess":
-        return <SharedAccessScreen />;
+      case "members":
+        return <TenantMembersScreen />;
       case "medications":
         return (
           <MedicationsListScreen
@@ -214,9 +213,9 @@ export default function AppLayout() {
         );
       case "pets":
         return (
-          <DogsListScreen
+          <PetsListScreen
             onNavigateToAddEdit={(id) =>
-              setSubScreen({ kind: "addEditDog", dogId: id })
+              setSubScreen({ kind: "addEditPet", petId: id })
             }
             onNavigateToMealTimes={() => setSubScreen({ kind: "mealTimes" })}
           />
@@ -233,9 +232,7 @@ export default function AppLayout() {
         return (
           <SettingsScreen
             onNavigateToMealTimes={() => setSubScreen({ kind: "mealTimes" })}
-            onNavigateToSharedAccess={() =>
-              setSubScreen({ kind: "sharedAccess" })
-            }
+            onNavigateToMembers={() => setSubScreen({ kind: "members" })}
             onNavigateToMedications={() =>
               setSubScreen({ kind: "medications" })
             }
@@ -263,7 +260,7 @@ export default function AppLayout() {
           <Header
             title1={title1}
             title2={title2}
-            showAddButton={showAddForTab || showAddForSub}
+            showAddButton={canWrite && (showAddForTab || showAddForSub)}
             onAddPress={showAddForSub ? handleAddSub : handleAdd}
             onVetPress={() => setSubScreen({ kind: "veterinarians" })}
           />

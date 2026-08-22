@@ -1,14 +1,10 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
-import {
-  useExercise,
-  exerciseTypeLabels,
-  exerciseTypeColors,
-  calculateScheduledTimes,
-} from "../context/ExerciseContext";
-import { useDogs } from "../context/DogsContext";
-import { formatLocalDate, parseLocalDate } from "../utils/supabase";
+import { calculateScheduledTimes } from "../utils/schedule";
+import { formatLocalDate, parseLocalDate, shortTime, today } from "../utils/date";
 import type { ExerciseType, NotificationTime } from "../types";
+import { exerciseTypeColors, exerciseTypeLabels } from "../constants/labels";
+import { useExercises, usePets } from "../hooks/queries";
 
 interface AddEditExerciseScreenProps {
   exerciseId?: string;
@@ -37,41 +33,41 @@ export default function AddEditExerciseScreen({
   exerciseId,
   onNavigateBack,
 }: AddEditExerciseScreenProps) {
-  const { addExercise, updateExercise, getExerciseById } = useExercise();
-  const { dogs } = useDogs();
+  const { create, update, byId } = useExercises();
+  const { items: pets } = usePets();
   const isEditing = !!exerciseId;
-  const existing = exerciseId ? getExerciseById(exerciseId) : undefined;
+  const existing = exerciseId ? byId(exerciseId) : undefined;
 
-  const [selectedDogId, setSelectedDogId] = useState(
-    existing?.dogId ?? dogs[0]?.id ?? "",
+  const [selectedPetId, setSelectedDogId] = useState(
+    existing?.pet_id ?? pets[0]?.id ?? "",
   );
   const [type, setType] = useState<ExerciseType>(existing?.type ?? "caminata");
   const [customTypeDescription, setCustomTypeDescription] = useState(
-    existing?.customTypeDescription ?? "",
+    existing?.custom_type_description ?? "",
   );
   const [durationMinutes, setDurationMinutes] = useState(
-    existing?.durationMinutes?.toString() ?? "30",
+    existing?.duration_minutes?.toString() ?? "30",
   );
   const [timesPerDay, setTimesPerDay] = useState(
-    existing?.timesPerDay?.toString() ?? "1",
+    existing?.times_per_day?.toString() ?? "1",
   );
-  const [startTime, setStartTime] = useState(existing?.startTime ?? "07:00");
-  const [endTime, setEndTime] = useState(existing?.endTime ?? "21:00");
-  const [startDate, setStartDate] = useState(
-    existing?.startDate
-      ? formatLocalDate(new Date(existing.startDate))
-      : formatLocalDate(new Date()),
+  const [startTime, setStartTime] = useState(
+    shortTime(existing?.start_time) || "07:00",
   );
-  const [isPermanent, setIsPermanent] = useState(existing?.isPermanent ?? true);
+  const [endTime, setEndTime] = useState(
+    shortTime(existing?.end_time) || "21:00",
+  );
+  const [startDate, setStartDate] = useState(existing?.start_date ?? today());
+  const [isPermanent, setIsPermanent] = useState(existing?.is_permanent ?? true);
   const [durationWeeks, setDurationWeeks] = useState(
-    existing?.durationWeeks?.toString() ?? "4",
+    existing?.duration_weeks?.toString() ?? "4",
   );
   const [notes, setNotes] = useState(existing?.notes ?? "");
   const [notificationTime, setNotificationTime] = useState<NotificationTime>(
-    existing?.notificationTime ?? "15min",
+    existing?.notification_time ?? "15min",
   );
   const [scheduledTimes, setScheduledTimes] = useState<string[]>(
-    existing?.scheduledTimes ?? [],
+    existing?.scheduled_times?.map(shortTime) ?? [],
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +80,7 @@ export default function AddEditExerciseScreen({
   }, [startTime, endTime, timesPerDay]);
 
   const handleSave = async () => {
-    if (!selectedDogId) {
+    if (!selectedPetId) {
       setError("Selecciona una mascota");
       return;
     }
@@ -110,34 +106,32 @@ export default function AddEditExerciseScreen({
     setError(null);
     setSaving(true);
     try {
-      const selectedDog = dogs.find((d) => d.id === selectedDogId)!;
-      let endDate: Date | undefined;
+      let endDate: string | undefined;
       if (!isPermanent) {
-        endDate = parseLocalDate(startDate);
-        endDate.setDate(endDate.getDate() + weeks * 7 - 1);
+        const d = parseLocalDate(startDate);
+        d.setDate(d.getDate() + weeks * 7 - 1);
+        endDate = formatLocalDate(d);
       }
       const data = {
-        dogId: selectedDogId,
-        dogName: selectedDog.name,
+        pet_id: selectedPetId,
         type,
-        customTypeDescription:
+        custom_type_description:
           type === "otro" ? customTypeDescription.trim() : undefined,
-        durationMinutes: dur,
-        timesPerDay: times,
-        startTime,
-        endTime,
-        scheduledTimes,
-        startDate: parseLocalDate(startDate),
-        isPermanent,
-        durationWeeks: isPermanent ? undefined : weeks,
-        endDate,
+        duration_minutes: dur,
+        times_per_day: times,
+        start_time: startTime,
+        end_time: endTime,
+        scheduled_times: scheduledTimes,
+        start_date: startDate,
+        is_permanent: isPermanent,
+        duration_weeks: isPermanent ? undefined : weeks,
+        end_date: endDate,
         notes: notes.trim(),
-        isActive: existing?.isActive ?? true,
-        notificationTime,
-        notificationIds: existing?.notificationIds ?? [],
+        is_active: existing?.is_active ?? true,
+        notification_time: notificationTime,
       };
-      if (isEditing && exerciseId) await updateExercise(exerciseId, data);
-      else await addExercise(data);
+      if (isEditing && exerciseId) await update.mutateAsync({ id: exerciseId, data: data });
+      else await create.mutateAsync(data);
       onNavigateBack();
     } catch {
       setError("No se pudo guardar");
@@ -167,13 +161,13 @@ export default function AddEditExerciseScreen({
             Mascota
           </label>
           <div className="flex flex-wrap gap-2">
-            {dogs.map((dog) => (
+            {pets.map((pet) => (
               <button
-                key={dog.id}
-                onClick={() => setSelectedDogId(dog.id)}
-                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${selectedDogId === dog.id ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
+                key={pet.id}
+                onClick={() => setSelectedDogId(pet.id)}
+                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${selectedPetId === pet.id ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
               >
-                {dog.name}
+                {pet.name}
               </button>
             ))}
           </div>

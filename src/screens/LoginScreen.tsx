@@ -14,7 +14,6 @@ export default function LoginScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const { signIn, signUp } = useAuth();
@@ -22,7 +21,6 @@ export default function LoginScreen() {
   const switchMode = (next: Mode) => {
     setMode(next);
     setError(null);
-    setSuccess(null);
     setEmail("");
     setPassword("");
     setConfirmPassword("");
@@ -42,17 +40,13 @@ export default function LoginScreen() {
       return;
     }
     setError(null);
-    setSuccess(null);
     setLoading(true);
     try {
-      if (mode === "register") {
-        await signUp(email, password);
-        setSuccess("¡Cuenta creada! Revisá tu correo para confirmarla.");
-      } else {
-        await signIn(email, password);
-      }
-    } catch (err: any) {
-      setError(err.message ?? "Ocurrió un error");
+      // El registro deja la sesión abierta: no hay confirmación por correo.
+      if (mode === "register") await signUp(email, password);
+      else await signIn(email, password);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ocurrió un error");
     } finally {
       setLoading(false);
     }
@@ -167,11 +161,6 @@ export default function LoginScreen() {
           {error && (
             <p className="text-white bg-red-500/40 rounded-xl px-4 py-3 text-sm">
               {error}
-            </p>
-          )}
-          {success && (
-            <p className="text-white bg-green-500/40 rounded-xl px-4 py-3 text-sm">
-              {success}
             </p>
           )}
 

@@ -8,10 +8,10 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import { useCalendar } from "../context/CalendarContext";
-import { useDogs } from "../context/DogsContext";
 import CalendarMonthView from "../components/calendar/CalendarMonthView";
 import AppointmentCard from "../components/calendar/AppointmentCard";
+import { useAppointments, usePets } from "../hooks/queries";
+import { formatLocalDate, parseLocalDate, shortTime } from "../utils/date";
 
 interface CalendarListScreenProps {
   onNavigateToAddEdit: (appointmentId?: string) => void;
@@ -40,15 +40,17 @@ function expandAppointments(
 ): Appointment[] {
   const result: Appointment[] = [];
   for (const apt of baseAppointments) {
-    if (!apt.recurrencePattern || apt.recurrencePattern === "none") {
+    if (!apt.recurrence_pattern || apt.recurrence_pattern === "none") {
       result.push(apt);
       continue;
     }
-    const effectiveEnd = apt.recurrenceEndDate
-      ? new Date(Math.min(apt.recurrenceEndDate.getTime(), rangeEnd.getTime()))
+    const effectiveEnd = apt.recurrence_end_date
+      ? new Date(
+          Math.min(parseLocalDate(apt.recurrence_end_date).getTime(), rangeEnd.getTime()),
+        )
       : rangeEnd;
 
-    const current = new Date(apt.date);
+    const current = parseLocalDate(apt.date);
     current.setHours(0, 0, 0, 0);
 
     for (let i = 0; i < 1000; i++) {
@@ -57,17 +59,17 @@ function expandAppointments(
       if (occDate >= rangeStart) {
         result.push({
           ...apt,
-          date: occDate,
+          date: formatLocalDate(occDate),
           id: i === 0 ? apt.id : `${apt.id}__${dateKey(occDate)}`,
         });
       }
-      if (apt.recurrencePattern === "daily") {
+      if (apt.recurrence_pattern === "daily") {
         current.setDate(current.getDate() + 1);
-      } else if (apt.recurrencePattern === "weekly") {
+      } else if (apt.recurrence_pattern === "weekly") {
         current.setDate(current.getDate() + 7);
-      } else if (apt.recurrencePattern === "biweekly") {
+      } else if (apt.recurrence_pattern === "biweekly") {
         current.setDate(current.getDate() + 14);
-      } else if (apt.recurrencePattern === "monthly") {
+      } else if (apt.recurrence_pattern === "monthly") {
         current.setMonth(current.getMonth() + 1);
       } else {
         break;
@@ -80,8 +82,8 @@ function expandAppointments(
 export default function CalendarListScreen({
   onNavigateToAddEdit,
 }: CalendarListScreenProps) {
-  const { appointments, deleteAppointment } = useCalendar();
-  const { dogs } = useDogs();
+  const { items: appointments, remove } = useAppointments();
+  const { items: pets } = usePets();
 
   // Expande las recurrencias en un rango de ±6/+12 meses
   const expandedAppointments = useMemo(() => {
@@ -126,43 +128,24 @@ export default function CalendarListScreen({
   const selectedDayAppointments = useMemo(() => {
     if (!selectedCalDate) return [];
     return [...expandedAppointments]
-      .filter((a) => {
-        const d = new Date(a.date);
-        d.setHours(0, 0, 0, 0);
-        return d.getTime() === selectedCalDate.getTime();
-      })
-      .sort((a, b) => a.time.localeCompare(b.time));
+      .filter((a) => a.date === formatLocalDate(selectedCalDate))
+      .sort((a, b) => shortTime(a.time).localeCompare(shortTime(b.time)));
   }, [expandedAppointments, selectedCalDate]);
 
   // Agrupación por mes para la vista "próximas"
   const handleDelete = async (id: string) => {
     if (window.confirm("¿Estás seguro de eliminar esta cita?"))
-      await deleteAppointment(id);
+      await remove.mutate(id);
   };
 
   const filtered = (() => {
-    const todayTs = (() => {
-      const d = new Date();
-      d.setHours(0, 0, 0, 0);
-      return d.getTime();
-    })();
-    const sorted = [...expandedAppointments].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    const todayStr = formatLocalDate(new Date());
+    const sorted = [...expandedAppointments].sort((a, b) =>
+      a.date.localeCompare(b.date),
     );
-    if (filter === "upcoming")
-      return sorted.filter((a) => {
-        const d = new Date(a.date);
-        d.setHours(0, 0, 0, 0);
-        return d.getTime() >= todayTs;
-      });
+    if (filter === "upcoming") return sorted.filter((a) => a.date >= todayStr);
     if (filter === "past")
-      return sorted
-        .filter((a) => {
-          const d = new Date(a.date);
-          d.setHours(0, 0, 0, 0);
-          return d.getTime() < todayTs;
-        })
-        .reverse();
+      return sorted.filter((a) => a.date < todayStr).reverse();
     return sorted;
   })();
 
@@ -170,8 +153,8 @@ export default function CalendarListScreen({
     if (filter !== "upcoming") return [];
     const groups: { key: string; label: string; items: typeof filtered }[] = [];
     filtered.forEach((apt) => {
-      const d = new Date(apt.date);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const d = parseLocalDate(apt.date);
+      const key = apt.date.slice(0, 7);
       const label = d
         .toLocaleDateString("es-ES", { month: "long", year: "numeric" })
         .replace(/^\w/, (c) => c.toUpperCase());
@@ -284,7 +267,7 @@ export default function CalendarListScreen({
           </div>
 
           <div className="px-5">
-            {dogs.length === 0 ? (
+            {pets.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                 <Dog size={64} strokeWidth={1.5} />
                 <p className="mt-4 text-base text-gray-500 text-center">

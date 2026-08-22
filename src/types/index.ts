@@ -1,5 +1,5 @@
 // ============================================================
-// Shared types — migrated from dogs-calendar-react-native
+// Tipos del dominio. Coinciden 1:1 con los schemas de pewos-api.
 // ============================================================
 
 export type AppointmentType =
@@ -44,131 +44,165 @@ export type NotificationTime =
   | "2h"
   | "1day";
 
-export interface Dog {
+export type TenantRole = "owner" | "member" | "viewer";
+
+export type CompletionItemType =
+  | "medication"
+  | "exercise"
+  | "appointment"
+  | "care";
+
+// ── Sesión y grupos ────────────────────────────────────────────────────────
+
+export interface User {
+  id: string;
+  email: string;
+  display_name: string | null;
+}
+
+export interface Membership {
   id: string;
   name: string;
-  photo?: string;
-  breed: string;
-  birthDate: Date;
-  gender: "male" | "female";
-  isNeutered: boolean;
+  timezone: string;
+  role: TenantRole;
+}
+
+export interface Session {
+  user: User;
+  active_tenant: Membership | null;
+  memberships: Membership[];
+}
+
+export interface TenantMember {
+  user_id: string;
+  email: string;
+  display_name: string | null;
+  role: TenantRole;
+  joined_at: string;
+}
+
+export interface Invitation {
+  id: string;
+  code: string;
+  role: TenantRole;
+  max_uses: number;
+  used_count: number;
+  expires_at: string;
+}
+
+// ── Dominio ────────────────────────────────────────────────────────────────
+
+export interface Pet {
+  id: string;
+  name: string;
+  breed: string | null;
+  birth_date: string | null;
+  gender: "male" | "female" | null;
+  neutered: boolean;
+  photo_key: string | null;
+  photo_url: string | null;
 }
 
 export interface Appointment {
   id: string;
-  dogId: string;
-  dogName: string;
-  date: Date;
-  time: string;
+  pet_id: string;
+  pet_name: string;
   type: AppointmentType;
-  customTypeDescription?: string;
-  notes?: string;
-  notificationTime: NotificationTime;
-  notificationId?: string;
-  recurrencePattern?: RecurrencePattern;
-  recurrenceEndDate?: Date;
-  recurrenceParentId?: string;
+  custom_type_description: string | null;
+  date: string;
+  time: string;
+  notes: string | null;
+  notification_time: NotificationTime;
+  recurrence_pattern: RecurrencePattern;
+  recurrence_end_date: string | null;
 }
 
 export interface Medication {
   id: string;
-  dogId: string;
-  dogName: string;
+  pet_id: string;
+  pet_name: string;
   name: string;
-  dosage: string;
-  scheduleType: ScheduleType;
-  frequencyHours?: number;
-  startTime?: string;
-  mealIds?: string[];
-  durationDays: number;
-  startDate: Date;
-  scheduledTimes: string[];
-  endDate: Date;
-  notes?: string;
-  isActive: boolean;
-  notificationTime: NotificationTime;
-  notificationIds: string[];
+  dosage: string | null;
+  schedule_type: ScheduleType;
+  frequency_hours: number | null;
+  start_time: string | null;
+  start_date: string;
+  duration_days: number;
+  end_date: string | null;
+  scheduled_times: string[];
+  meal_time_ids: string[];
+  notes: string | null;
+  notification_time: NotificationTime;
+  is_active: boolean;
 }
 
 export interface Exercise {
   id: string;
-  dogId: string;
-  dogName: string;
+  pet_id: string;
+  pet_name: string;
   type: ExerciseType;
-  customTypeDescription?: string;
-  durationMinutes: number;
-  timesPerDay: number;
-  startTime: string;
-  endTime: string;
-  scheduledTimes: string[];
-  startDate: Date;
-  isPermanent: boolean;
-  durationWeeks?: number;
-  endDate?: Date;
-  notes?: string;
-  isActive: boolean;
-  notificationTime: NotificationTime;
-  notificationIds: string[];
+  custom_type_description: string | null;
+  duration_minutes: number;
+  times_per_day: number;
+  start_time: string;
+  end_time: string;
+  scheduled_times: string[];
+  start_date: string;
+  is_permanent: boolean;
+  duration_weeks: number | null;
+  end_date: string | null;
+  notes: string | null;
+  notification_time: NotificationTime;
+  is_active: boolean;
 }
 
 export interface Care {
   id: string;
-  dogId: string;
-  dogName: string;
+  pet_id: string;
+  pet_name: string;
   type: CareType;
-  customTypeDescription?: string;
-  durationMinutes: number;
-  timesPerDay: number;
-  startTime: string;
-  endTime: string;
-  scheduledTimes: string[];
-  startDate: Date;
-  isPermanent: boolean;
-  durationDays?: number;
-  endDate?: Date;
-  notes?: string;
-  isActive: boolean;
-  notificationTime: NotificationTime;
-  daysOfWeek?: number[]; // 0=Domingo, 1=Lunes, ..., 6=Sábado. undefined = todos los días
+  custom_type_description: string | null;
+  duration_minutes: number;
+  times_per_day: number;
+  start_time: string;
+  end_time: string;
+  scheduled_times: string[];
+  start_date: string;
+  is_permanent: boolean;
+  duration_days: number | null;
+  end_date: string | null;
+  /** 0=Domingo … 6=Sábado. null = todos los días. */
+  days_of_week: number[] | null;
+  notes: string | null;
+  notification_time: NotificationTime;
+  is_active: boolean;
 }
 
 export interface MealTime {
   id: string;
-  userId: string;
   name: string;
-  time: string; // HH:mm
-  order: number;
+  time: string;
+  order_index: number;
 }
 
 export interface Completion {
   id: string;
-  userId: string;
-  itemType: "medication" | "exercise" | "appointment" | "care";
-  itemId: string;
-  scheduledTime?: string;
-  completedDate: string;
-  completedAt: Date;
-}
-
-export interface SharedAccess {
-  id: string;
-  ownerId: string;
-  ownerEmail: string;
-  sharedWithEmail: string;
-  sharedWithId?: string;
-  status: "pending" | "accepted" | "rejected";
-  createdAt: Date;
+  item_type: CompletionItemType;
+  item_id: string;
+  scheduled_time: string | null;
+  completed_date: string;
+  completed_by_user_id: string | null;
+  completed_by_name: string | null;
 }
 
 export interface Veterinarian {
   id: string;
-  userId: string;
-  dogId: string;
-  dogName: string;
+  pet_id: string;
+  pet_name: string;
   name: string;
-  clinicName?: string;
-  phone?: string;
-  email?: string;
-  address?: string;
-  notes?: string;
+  clinic_name: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
 }

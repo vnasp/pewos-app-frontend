@@ -9,26 +9,17 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { appointmentTypeLabels } from "../../context/CalendarContext";
-import { exerciseTypeLabels } from "../../context/ExerciseContext";
-import { careTypeLabels } from "../../context/CareContext";
-import type { Dog, Completion } from "../../types";
+import type { Pet, Completion } from "../../types";
 import type { HomeEvent } from "./types";
+import { appointmentTypeLabels, careTypeLabels, exerciseTypeLabels } from "../../constants/labels";
 
 interface EventsListProps {
   events: HomeEvent[];
-  completions: Record<string, Completion | null>;
-  selectedDogId: string | null;
-  dogs: Dog[];
+  completionFor: (ev: HomeEvent) => Completion | undefined;
+  selectedPetId: string | null;
+  pets: Pet[];
+  canWrite: boolean;
   onToggle: (ev: HomeEvent) => void;
-}
-
-function getKey(ev: HomeEvent): string {
-  if (ev.type === "appointment") return `appointment-${ev.data.id}`;
-  if (ev.type === "medication")
-    return `medication-${ev.medicationId}-${ev.scheduledTime}`;
-  if (ev.type === "care") return `care-${ev.careId}-${ev.scheduledTime}`;
-  return `exercise-${ev.exerciseId}-${ev.scheduledTime}`;
 }
 
 function getLabel(ev: HomeEvent): string {
@@ -36,20 +27,20 @@ function getLabel(ev: HomeEvent): string {
     return appointmentTypeLabels[ev.data.type] ?? ev.data.type;
   if (ev.type === "medication") return ev.data.name;
   if (ev.type === "care") {
-    if (ev.data.type === "otro" && ev.data.customTypeDescription)
-      return ev.data.customTypeDescription;
+    if (ev.data.type === "otro" && ev.data.custom_type_description)
+      return ev.data.custom_type_description;
     return careTypeLabels[ev.data.type] ?? ev.data.type;
   }
   // exercise
-  if (ev.data.type === "otro" && ev.data.customTypeDescription)
-    return ev.data.customTypeDescription;
+  if (ev.data.type === "otro" && ev.data.custom_type_description)
+    return ev.data.custom_type_description;
   return exerciseTypeLabels[ev.data.type] ?? ev.data.type;
 }
 
 function getExtraInfo(ev: HomeEvent): string | null {
   if (ev.type === "medication") return ev.data.dosage ?? null;
-  if (ev.type === "exercise") return `${ev.data.durationMinutes} min`;
-  if (ev.type === "care") return `${ev.data.durationMinutes} min`;
+  if (ev.type === "exercise") return `${ev.data.duration_minutes} min`;
+  if (ev.type === "care") return `${ev.data.duration_minutes} min`;
   return null;
 }
 
@@ -62,30 +53,31 @@ const typeConfig = {
 
 export default function EventsList({
   events,
-  completions,
-  selectedDogId,
-  dogs,
+  completionFor,
+  selectedPetId,
+  pets,
+  canWrite,
   onToggle,
 }: EventsListProps) {
   const [showCompleted, setShowCompleted] = useState(false);
 
-  const dogName = selectedDogId
-    ? (dogs.find((d) => d.id === selectedDogId)?.name ?? "")
+  const petName = selectedPetId
+    ? (pets.find((d) => d.id === selectedPetId)?.name ?? "")
     : null;
 
-  const doneCount = events.filter((ev) => !!completions[getKey(ev)]).length;
+  const doneCount = events.filter((ev) => completionFor(ev)).length;
   const pendingCount = events.length - doneCount;
   const visibleEvents = showCompleted
     ? events
-    : events.filter((ev) => !completions[getKey(ev)]);
+    : events.filter((ev) => !completionFor(ev));
 
   const heading =
     events.length === 0
-      ? dogName
-        ? `Sin recordatorios para ${dogName}`
+      ? petName
+        ? `Sin recordatorios para ${petName}`
         : "Sin recordatorios para hoy"
       : `${pendingCount} pendiente${pendingCount !== 1 ? "s" : ""}${
-          dogName ? ` · ${dogName}` : " hoy"
+          petName ? ` · ${petName}` : " hoy"
         }`;
 
   return (
@@ -135,8 +127,8 @@ export default function EventsList({
           {visibleEvents.map((ev) => {
             const cfg = typeConfig[ev.type];
             const Icon = cfg.icon;
-            const key = getKey(ev);
-            const isDone = !!completions[key];
+            const completion = completionFor(ev);
+            const isDone = !!completion;
             const extraInfo = getExtraInfo(ev);
             const notes = ev.data.notes ?? null;
 
@@ -158,7 +150,7 @@ export default function EventsList({
                     {getLabel(ev)}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {selectedDogId ? ev.time : `${ev.dogName} · ${ev.time}`}
+                    {selectedPetId ? ev.time : `${ev.petName} · ${ev.time}`}
                     {extraInfo && ` · ${extraInfo}`}
                   </p>
                   {notes && (
@@ -166,11 +158,17 @@ export default function EventsList({
                       {notes}
                     </p>
                   )}
+                  {completion?.completed_by_name && (
+                    <p className="text-xs text-green-600 truncate mt-0.5">
+                      Marcado por {completion.completed_by_name}
+                    </p>
+                  )}
                 </div>
 
                 <button
                   onClick={() => onToggle(ev)}
-                  className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center active:scale-90 transition-all ${
+                  disabled={!canWrite}
+                  className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center active:scale-90 transition-all disabled:active:scale-100 disabled:opacity-60 ${
                     isDone ? "bg-green-500" : "bg-gray-400 hover:bg-gray-500"
                   }`}
                 >
