@@ -1,4 +1,12 @@
-import type { Appointment, Medication, Exercise, Care } from "../../types";
+import type { Appointment, Care, Exercise, Medication } from "./index";
+
+/**
+ * Un recordatorio ya resuelto para un día concreto.
+ *
+ * Vivían en `components/home/types.ts`, pero los deriva `utils/todayEvents.ts` y los consume
+ * más de un componente: pertenecen al dominio, no a una carpeta de pantalla.
+ */
+export type EventCategory = "medication" | "exercise" | "care" | "appointment";
 
 export type AppointmentEvent = {
   type: "appointment";

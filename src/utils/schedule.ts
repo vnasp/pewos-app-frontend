@@ -29,6 +29,46 @@ export function calculateScheduledTimes(
   });
 }
 
+export type TimeOfDay = "morning" | "afternoon" | "night";
+
+export interface TimeOfDayGroup<T> {
+  id: TimeOfDay;
+  label: string;
+  events: T[];
+}
+
+const momentos: { id: TimeOfDay; label: string; until: number }[] = [
+  { id: "morning", label: "Mañana", until: 12 * 60 },
+  { id: "afternoon", label: "Tarde", until: 19 * 60 },
+  { id: "night", label: "Noche", until: Infinity },
+];
+
+/**
+ * Reparte eventos en mañana (<12:00), tarde (12:00–18:59) y noche (>=19:00).
+ *
+ * Los momentos sin eventos no se devuelven, para que la pantalla no dibuje encabezados
+ * huérfanos. Dentro de cada momento se respeta el orden de entrada, que en Hoy ya viene
+ * ordenado por hora.
+ */
+export function groupByTimeOfDay<T extends { time: string }>(
+  events: T[],
+): TimeOfDayGroup<T>[] {
+  const buckets = new Map<TimeOfDay, T[]>();
+
+  for (const event of events) {
+    const [h, m] = event.time.split(":").map(Number);
+    const minutes = h * 60 + m;
+    const momento = momentos.find((mo) => minutes < mo.until)!;
+    const bucket = buckets.get(momento.id);
+    if (bucket) bucket.push(event);
+    else buckets.set(momento.id, [event]);
+  }
+
+  return momentos
+    .filter((mo) => buckets.has(mo.id))
+    .map((mo) => ({ id: mo.id, label: mo.label, events: buckets.get(mo.id)! }));
+}
+
 /** Horarios de un medicamento programado cada X horas. */
 export function calculateTimesFromHours(startTime: string, freqHours: number): string[] {
   if (!startTime || freqHours < 1) return [];

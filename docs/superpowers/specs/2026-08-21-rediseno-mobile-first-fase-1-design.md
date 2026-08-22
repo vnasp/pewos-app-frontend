@@ -273,16 +273,15 @@ el FAB tapa la última tarjeta.
 1. **Contraste sobre el degradado.** El extremo `#7C3AED` da 5.73:1 con blanco puro, pero
    cualquier texto con opacidad hay que verificarlo. Regla: nada por debajo de 85% de opacidad
    sobre el degradado.
-2. **Ícono, splash y `theme_color` quedan desalineados** durante la fase 1: el manifest sigue en
-   `#4f39f6` mientras la app ya es índigo nocturno. Ver "Trabajo pendiente".
+2. **El ícono y el splash quedan desalineados** durante la fase 1: siguen siendo el calendario
+   violeta con huella naranja mientras la app ya es índigo nocturno. Ver "Trabajo pendiente".
 3. **App visualmente mezclada** durante las fases 2-4. Es deliberado y no rompe nada, pero se ve.
 
 ## Trabajo pendiente (fuera de fase 1)
 
-- Regenerar ícono, `apple-touch-icon`, `favicon`, splash y los `pwa-*.png`, y actualizar
-  `theme_color` / `background_color` de `#4f39f6` a `#312E81` en `vite.config.ts` y en la
-  etiqueta `<meta name="theme-color">` de `index.html`. Se hará cuando exista el ícono nuevo;
-  hacerlo antes dejaría un ícono violeta viejo sobre un splash índigo.
+- Regenerar ícono, `apple-touch-icon`, `favicon`, splash y los `pwa-*.png`. El `theme_color` y
+  el `background_color` **sí se actualizaron en la fase 1** (no dependen del arte y dejarlos en
+  `#4f39f6` desentonaba con el degradado nuevo); lo que queda es el arte en sí.
 - Migrar los 9 `window.confirm` a `Sheet` (fases 2 y 3).
 - Borrar `appointmentTypeColors`, `exerciseTypeColors` y `careTypeColors` de `labels.ts` al
   cerrar la fase 3, cuando ya no los importe nadie.

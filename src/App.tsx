@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import "./App.css";
 import AppLayout from "./components/AppLayout";
+import Spinner from "./components/ui/Spinner";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { usePwaUpdate } from "./hooks/usePwaUpdate";
 import LoginScreen from "./screens/LoginScreen";
@@ -31,8 +32,8 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-svh bg-indigo-600">
-        <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center h-svh bg-brand-gradient">
+        <Spinner tone="light" size="lg" />
       </div>
     );
   }
