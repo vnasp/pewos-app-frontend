@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 interface SheetProps {
   open: boolean;
@@ -26,7 +27,7 @@ export default function Sheet({ open, onClose, title, children }: SheetProps) {
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <button
         type="button"
@@ -44,6 +45,7 @@ export default function Sheet({ open, onClose, title, children }: SheetProps) {
         <h2 className="text-base font-extrabold text-ink mb-3">{title}</h2>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

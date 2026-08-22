@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Clock, Dumbbell, HeartPulse, LogOut, Pill, Users } from "lucide-react";
 
 import { roleLabels } from "../constants/labels";
+import ConfirmSheet from "../components/ui/ConfirmSheet";
 import { useAuth } from "../context/AuthContext";
 
 interface SettingsScreenProps {
@@ -20,9 +22,7 @@ export default function SettingsScreen({
 }: SettingsScreenProps) {
   const { user, signOut, activeTenant, memberships, switchTenant, role } = useAuth();
 
-  const handleSignOut = async () => {
-    if (window.confirm("¿Cerrar sesión?")) await signOut();
-  };
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
 
   const items = [
     {
@@ -131,13 +131,22 @@ export default function SettingsScreen({
 
       <div className="px-5 lg:max-w-3xl lg:mx-auto lg:w-full">
         <button
-          onClick={handleSignOut}
+          onClick={() => setConfirmSignOut(true)}
           className="w-full bg-red-50 text-red-600 font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           <LogOut size={18} />
           Cerrar sesión
         </button>
       </div>
+
+      <ConfirmSheet
+        open={confirmSignOut}
+        onClose={() => setConfirmSignOut(false)}
+        onConfirm={signOut}
+        title="¿Cerrar sesión?"
+        description="Tendrás que volver a entrar con tu correo y contraseña. Los datos del grupo no se pierden."
+        confirmLabel="Cerrar sesión"
+      />
     </div>
   );
 }
