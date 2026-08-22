@@ -1,15 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import { calculateScheduledTimes } from "../utils/schedule";
-import { formatLocalDate, parseLocalDate, shortTime, today } from "../utils/date";
-import type { CareType, NotificationTime } from "../types";
-import { careTypeLabels } from "../constants/labels";
-import { useCares, usePets } from "../hooks/queries";
-
-interface AddEditCareScreenProps {
-  careId?: string;
-  onNavigateBack: () => void;
-}
+import { calculateScheduledTimes } from "../../utils/schedule";
+import { formatLocalDate, parseLocalDate, shortTime, today } from "../../utils/date";
+import type { CareType, NotificationTime } from "../../types";
+import { careTypeLabels } from "../../constants/labels";
+import { useCares, usePets } from "../../hooks/queries";
 
 const careTypes: CareType[] = [
   "limpieza_herida",
@@ -29,10 +25,12 @@ const notificationOptions: { value: NotificationTime; label: string }[] = [
   { value: "1day", label: "1 día antes" },
 ];
 
-export default function AddEditCareScreen({
-  careId,
-  onNavigateBack,
-}: AddEditCareScreenProps) {
+function AddEditCareScreen() {
+  const { id: careId } = useParams();
+  const navigate = useNavigate();
+  // Vuelve a una ruta concreta y no con `navigate(-1)`: quien llega por un enlace
+  // compartido no tiene historial atrás y retroceder lo sacaría de la app.
+  const goBack = () => navigate("/ajustes/cuidados");
   const { create, update, byId } = useCares();
   const { items: pets } = usePets();
   const isEditing = !!careId;
@@ -140,7 +138,7 @@ export default function AddEditCareScreen({
       };
       if (isEditing && careId) await update.mutateAsync({ id: careId, data: data });
       else await create.mutateAsync(data);
-      onNavigateBack();
+      goBack();
     } catch {
       setError("No se pudo guardar");
     } finally {
@@ -152,7 +150,7 @@ export default function AddEditCareScreen({
     <div className="flex flex-col h-full overflow-y-auto pb-6">
       <div className="px-5 pt-5 pb-3 flex items-center gap-2 lg:max-w-3xl lg:mx-auto lg:w-full">
         <button
-          onClick={onNavigateBack}
+          onClick={goBack}
           className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform shrink-0"
         >
           <ArrowLeft size={18} className="text-gray-800" />
@@ -440,3 +438,5 @@ export default function AddEditCareScreen({
     </div>
   );
 }
+
+export default AddEditCareScreen;

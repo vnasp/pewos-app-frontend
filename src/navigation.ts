@@ -1,90 +1,34 @@
 /**
- * Navegación de la app: pestañas, subpantallas, títulos y qué crea el botón "+".
+ * Vocabulario de navegación: las pestañas de la barra y lo que cada ruta le declara al
+ * shell (título, pestaña activa, a dónde vuelve la flecha, qué crea el "+").
  *
- * Vivía dentro de `AppLayout`, mezclado con el JSX y repartido entre cuatro constantes y dos
- * handlers. Los títulos eran de dos líneas, lo que obligaba a partir palabras con guion
- * ("Medica-"/"mento", "Veteri-"/"narios"); ahora son de una sola línea.
+ * Antes esto eran tres `switch` —`titleFor`, `addActionFor` y `requiresPet`— sobre una
+ * unión `SubScreen` de trece miembros, y agregar una pantalla obligaba a tocar los tres
+ * sin que nada avisara si te saltabas uno. Ahora cada ruta lleva lo suyo encima, en su
+ * `handle`, y el shell solo lee.
  */
 
 export type Tab = "home" | "appointments" | "pets" | "settings";
 
-export type SubScreen =
-  | { kind: "none" }
-  | { kind: "addEditPet"; petId?: string }
-  | { kind: "addEditAppointment"; appointmentId?: string }
-  | { kind: "addEditMedication"; medicationId?: string }
-  | { kind: "addEditExercise"; exerciseId?: string }
-  | { kind: "addEditCare"; careId?: string }
-  | { kind: "mealTimes" }
-  | { kind: "members" }
-  | { kind: "medications" }
-  | { kind: "exercises" }
-  | { kind: "cares" }
-  | { kind: "veterinarians" }
-  | { kind: "addEditVeterinarian"; veterinarianId?: string };
-
-export const tabTitles: Record<Tab, string> = {
-  home: "Recordatorios de hoy",
-  appointments: "Agenda",
-  pets: "Mis mascotas",
-  settings: "Ajustes",
-};
-
-const subScreenTitles: Record<Exclude<SubScreen["kind"], "none">, string> = {
-  addEditPet: "Mascota",
-  addEditAppointment: "Cita",
-  addEditMedication: "Medicamento",
-  addEditExercise: "Rutina de ejercicio",
-  addEditCare: "Cuidado operatorio",
-  mealTimes: "Horarios de comida",
-  members: "Mi grupo",
-  medications: "Medicamentos",
-  exercises: "Rutinas de ejercicio",
-  cares: "Cuidados operatorios",
-  veterinarians: "Veterinarios",
-  addEditVeterinarian: "Veterinario",
-};
-
-export function titleFor(tab: Tab, subScreen: SubScreen): string {
-  return subScreen.kind === "none"
-    ? tabTitles[tab]
-    : subScreenTitles[subScreen.kind];
-}
-
-/**
- * Qué agrega el "+" en la pantalla actual.
- *
- * `"choose"` significa que no hay una sola cosa que agregar y hay que preguntar: pasa solo en
- * Hoy, donde conviven las cuatro categorías. `null` significa que la pantalla no crea nada.
- */
-export function addActionFor(
-  tab: Tab,
-  subScreen: SubScreen,
-): SubScreen | "choose" | null {
-  switch (subScreen.kind) {
-    case "medications":
-      return { kind: "addEditMedication" };
-    case "exercises":
-      return { kind: "addEditExercise" };
-    case "cares":
-      return { kind: "addEditCare" };
-    case "veterinarians":
-      return { kind: "addEditVeterinarian" };
-    case "none":
-      break;
-    default:
-      // Formularios, horarios de comida y "mi grupo" no crean desde el header.
-      return null;
-  }
-
-  switch (tab) {
-    case "home":
-      return "choose";
-    case "pets":
-      return { kind: "addEditPet" };
-    case "appointments":
-      return { kind: "addEditAppointment" };
-    case "settings":
-      return null;
-  }
+export interface RouteHandle {
+  /** Título que pinta el Header. */
+  title: string;
+  /**
+   * Pestaña que queda marcada en la barra. Sin ella no se marca ninguna: Veterinarios
+   * se abre desde el header y no pertenece a ninguna.
+   */
+  tab?: Tab;
+  /**
+   * A dónde vuelve la flecha del header; sin ella no hay flecha. Es una ruta concreta y
+   * no `navigate(-1)` porque quien llega por un enlace compartido no tiene historial
+   * atrás y la flecha lo sacaría de la app.
+   */
+  parent?: string;
+  /**
+   * A dónde lleva el "+". `"choose"` abre la hoja de Hoy, que pregunta qué crear porque
+   * ahí conviven las cuatro categorías. Sin `add` no hay "+".
+   */
+  add?: string;
+  /** No hay nada que listar ni forma válida de crear sin una mascota registrada. */
+  requiresPet?: boolean;
 }

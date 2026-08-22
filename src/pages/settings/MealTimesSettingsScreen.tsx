@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Clock, Pencil, Trash2, Plus, Save, X } from "lucide-react";
-import type { MealTime } from "../types";
-import { useMealTimes } from "../hooks/queries";
-import { shortTime } from "../utils/date";
+import type { MealTime } from "../../types";
+import { useMealTimes } from "../../hooks/queries";
+import { shortTime } from "../../utils/date";
 
-export default function MealTimesSettingsScreen() {
+function MealTimesSettingsScreen() {
   const { items: mealTimes, create, update, remove } = useMealTimes();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -188,3 +188,5 @@ export default function MealTimesSettingsScreen() {
     </div>
   );
 }
+
+export default MealTimesSettingsScreen;

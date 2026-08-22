@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
-import type { Appointment } from "../types";
+import { useNavigate } from "react-router";
+import type { Appointment } from "../../types";
 import {
   Calendar,
   Dog,
@@ -8,14 +9,10 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import CalendarMonthView from "../components/calendar/CalendarMonthView";
-import AppointmentCard from "../components/calendar/AppointmentCard";
-import { useAppointments, usePets } from "../hooks/queries";
-import { formatLocalDate, parseLocalDate, shortTime } from "../utils/date";
-
-interface CalendarListScreenProps {
-  onNavigateToAddEdit: (appointmentId?: string) => void;
-}
+import CalendarMonthView from "../../components/calendar/CalendarMonthView";
+import AppointmentCard from "../../components/calendar/AppointmentCard";
+import { useAppointments, usePets } from "../../hooks/queries";
+import { formatLocalDate, parseLocalDate, shortTime } from "../../utils/date";
 
 type Filter = "upcoming" | "past" | "all";
 type ViewMode = "list" | "calendar";
@@ -79,9 +76,8 @@ function expandAppointments(
   return result;
 }
 
-export default function CalendarListScreen({
-  onNavigateToAddEdit,
-}: CalendarListScreenProps) {
+function CalendarListScreen() {
+  const navigate = useNavigate();
   const { items: appointments, remove } = useAppointments();
   const { items: pets } = usePets();
 
@@ -235,7 +231,7 @@ export default function CalendarListScreen({
                   <AppointmentCard
                     key={apt.id}
                     apt={apt}
-                    onEdit={() => onNavigateToAddEdit(baseId(apt.id))}
+                    onEdit={() => navigate(`/agenda/${baseId(apt.id)}`)}
                     onDelete={() => handleDelete(baseId(apt.id))}
                   />
                 ))}
@@ -322,7 +318,7 @@ export default function CalendarListScreen({
                             <AppointmentCard
                               key={apt.id}
                               apt={apt}
-                              onEdit={() => onNavigateToAddEdit(baseId(apt.id))}
+                              onEdit={() => navigate(`/agenda/${baseId(apt.id)}`)}
                               onDelete={() => handleDelete(baseId(apt.id))}
                             />
                           ))}
@@ -338,7 +334,7 @@ export default function CalendarListScreen({
                   <AppointmentCard
                     key={apt.id}
                     apt={apt}
-                    onEdit={() => onNavigateToAddEdit(baseId(apt.id))}
+                    onEdit={() => navigate(`/agenda/${baseId(apt.id)}`)}
                     onDelete={() => handleDelete(baseId(apt.id))}
                   />
                 ))}
@@ -352,3 +348,5 @@ export default function CalendarListScreen({
 }
 
 // ─── Tarjeta reutilizable → ver src/components/calendar/AppointmentCard.tsx ──
+
+export default CalendarListScreen;

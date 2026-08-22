@@ -1,19 +1,17 @@
 import { ArrowLeft, Camera } from "lucide-react";
 import { useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 
-import * as apiClient from "../api";
-import { usePets } from "../hooks/queries";
-import { today } from "../utils/date";
+import * as apiClient from "../../api";
+import { usePets } from "../../hooks/queries";
+import { today } from "../../utils/date";
 
-interface AddEditPetScreenProps {
-  petId?: string;
-  onNavigateBack: () => void;
-}
-
-export default function AddEditPetScreen({
-  petId,
-  onNavigateBack,
-}: AddEditPetScreenProps) {
+function AddEditPetScreen() {
+  const { id: petId } = useParams();
+  const navigate = useNavigate();
+  // Vuelve a una ruta concreta y no con `navigate(-1)`: quien llega por un enlace
+  // compartido no tiene historial atrás y retroceder lo sacaría de la app.
+  const goBack = () => navigate("/mascotas");
   const { create, update, byId } = usePets();
   const isEditing = !!petId;
   const existing = byId(petId);
@@ -87,7 +85,7 @@ export default function AddEditPetScreen({
       if (photoKey) {
         await update.mutateAsync({ id: saved.id, data: { ...data, photo_key: photoKey } });
       }
-      onNavigateBack();
+      goBack();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar");
     } finally {
@@ -99,7 +97,7 @@ export default function AddEditPetScreen({
     <div className="flex flex-col h-full overflow-y-auto pb-6">
       <div className="px-5 pt-5 pb-3 flex items-center gap-2 lg:max-w-2xl lg:mx-auto lg:w-full">
         <button
-          onClick={onNavigateBack}
+          onClick={goBack}
           className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform shrink-0"
         >
           <ArrowLeft size={18} className="text-gray-800" />
@@ -211,3 +209,5 @@ export default function AddEditPetScreen({
     </div>
   );
 }
+
+export default AddEditPetScreen;

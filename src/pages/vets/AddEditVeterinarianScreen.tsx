@@ -1,16 +1,14 @@
 import { useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import { usePets, useVeterinarians } from "../hooks/queries";
+import { usePets, useVeterinarians } from "../../hooks/queries";
 
-interface AddEditVeterinarianScreenProps {
-  veterinarianId?: string;
-  onNavigateBack: () => void;
-}
-
-export default function AddEditVeterinarianScreen({
-  veterinarianId,
-  onNavigateBack,
-}: AddEditVeterinarianScreenProps) {
+function AddEditVeterinarianScreen() {
+  const { id: veterinarianId } = useParams();
+  const navigate = useNavigate();
+  // Vuelve a una ruta concreta y no con `navigate(-1)`: quien llega por un enlace
+  // compartido no tiene historial atrás y retroceder lo sacaría de la app.
+  const goBack = () => navigate("/veterinarios");
   const { create, update, byId } = useVeterinarians();
   const { items: pets } = usePets();
   const isEditing = !!veterinarianId;
@@ -54,7 +52,7 @@ export default function AddEditVeterinarianScreen({
       if (isEditing && veterinarianId)
         await update.mutateAsync({ id: veterinarianId, data: data });
       else await create.mutateAsync(data);
-      onNavigateBack();
+      goBack();
     } catch {
       setError("No se pudo guardar");
     } finally {
@@ -66,7 +64,7 @@ export default function AddEditVeterinarianScreen({
     <div className="flex flex-col h-full overflow-y-auto pb-6">
       <div className="px-5 pt-5 pb-3 flex items-center gap-2 lg:max-w-3xl lg:mx-auto lg:w-full">
         <button
-          onClick={onNavigateBack}
+          onClick={goBack}
           className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform shrink-0"
         >
           <ArrowLeft size={18} className="text-gray-800" />
@@ -197,3 +195,5 @@ export default function AddEditVeterinarianScreen({
     </div>
   );
 }
+
+export default AddEditVeterinarianScreen;

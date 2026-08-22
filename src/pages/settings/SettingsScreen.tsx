@@ -1,25 +1,15 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
+
+import { preloadOn } from "../../routes";
 import { Clock, Dumbbell, HeartPulse, LogOut, Pill, Users } from "lucide-react";
 
-import { roleLabels } from "../constants/labels";
-import ConfirmSheet from "../components/ui/ConfirmSheet";
-import { useAuth } from "../context/AuthContext";
+import { roleLabels } from "../../constants/labels";
+import ConfirmSheet from "../../components/ui/ConfirmSheet";
+import { useAuth } from "../../context/AuthContext";
 
-interface SettingsScreenProps {
-  onNavigateToMealTimes: () => void;
-  onNavigateToMembers: () => void;
-  onNavigateToMedications: () => void;
-  onNavigateToExercises: () => void;
-  onNavigateToCares: () => void;
-}
-
-export default function SettingsScreen({
-  onNavigateToMealTimes,
-  onNavigateToMembers,
-  onNavigateToMedications,
-  onNavigateToExercises,
-  onNavigateToCares,
-}: SettingsScreenProps) {
+function SettingsScreen() {
+  const navigate = useNavigate();
   const { user, signOut, activeTenant, memberships, switchTenant, role } = useAuth();
 
   const [confirmSignOut, setConfirmSignOut] = useState(false);
@@ -28,35 +18,35 @@ export default function SettingsScreen({
     {
       label: "Medicamentos",
       icon: Pill,
-      action: onNavigateToMedications,
+      path: "/ajustes/medicamentos",
       color: "bg-pink-100",
       fg: "text-pink-600",
     },
     {
       label: "Rutinas de ejercicio",
       icon: Dumbbell,
-      action: onNavigateToExercises,
+      path: "/ajustes/ejercicios",
       color: "bg-green-100",
       fg: "text-green-600",
     },
     {
       label: "Cuidados post-operatorios",
       icon: HeartPulse,
-      action: onNavigateToCares,
+      path: "/ajustes/cuidados",
       color: "bg-rose-100",
       fg: "text-rose-600",
     },
     {
       label: "Horarios de comida",
       icon: Clock,
-      action: onNavigateToMealTimes,
+      path: "/ajustes/horarios",
       color: "bg-amber-100",
       fg: "text-amber-600",
     },
     {
       label: "Integrantes del grupo",
       icon: Users,
-      action: onNavigateToMembers,
+      path: "/ajustes/grupo",
       color: "bg-indigo-100",
       fg: "text-indigo-600",
     },
@@ -111,10 +101,11 @@ export default function SettingsScreen({
       <div className="px-5 mb-5 lg:max-w-3xl lg:mx-auto lg:w-full">
         <p className="text-gray-500 text-xs font-semibold uppercase mb-3">Gestión</p>
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100">
-          {items.map(({ label, icon: Icon, action, color, fg }) => (
+          {items.map(({ label, icon: Icon, path, color, fg }) => (
             <button
               key={label}
-              onClick={action}
+              onClick={() => navigate(path)}
+              {...preloadOn(path)}
               className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
             >
               <div
@@ -150,3 +141,5 @@ export default function SettingsScreen({
     </div>
   );
 }
+
+export default SettingsScreen;

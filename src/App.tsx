@@ -1,55 +1,28 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { RouterProvider } from "react-router";
 
 import "./App.css";
-import AppLayout from "./components/AppLayout";
 import Spinner from "./components/ui/Spinner";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { usePwaUpdate } from "./hooks/usePwaUpdate";
-import AuthScreen from "./screens/AuthScreen";
+import AuthScreen from "./pages/auth/AuthScreen";
+import { router } from "./routes";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // La app es de uso personal y los datos cambian poco: se evita refetch al enfocar
-      // la ventana, que en una PWA de móvil ocurre constantemente.
-      refetchOnWindowFocus: false,
-      staleTime: 30_000,
+      refetchOnWindowFocus: true,
+      staleTime: 15_000,
       retry: 1,
     },
   },
 });
 
-/**
- * El onboarding se muestra una sola vez por navegador.
- *
- * Antes arrancaba siempre en `true` y no se guardaba nada, así que aparecía en cada
- * apertura de la app. El acceso va en try/catch porque en modo privado o con las cookies
- * bloqueadas `localStorage` lanza en vez de devolver null.
- */
-const ONBOARDING_KEY = "pewos.onboarding.seen";
-
-function hasSeenOnboarding(): boolean {
-  try {
-    return localStorage.getItem(ONBOARDING_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
 function AppContent() {
   const { user, loading } = useAuth();
-  const [seenOnboarding, setSeenOnboarding] = useState(hasSeenOnboarding);
-  usePwaUpdate();
+  const [introSeen, setIntroSeen] = useState(false);
 
-  const dismissOnboarding = () => {
-    try {
-      localStorage.setItem(ONBOARDING_KEY, "1");
-    } catch {
-      // Sin persistencia se volverá a mostrar; no es motivo para romper el flujo.
-    }
-    setSeenOnboarding(true);
-  };
+  const markIntroSeen = useCallback(() => setIntroSeen(true), []);
 
   if (loading) {
     return (
@@ -59,15 +32,15 @@ function AppContent() {
     );
   }
 
-  if (user) {
-    return <AppLayout />;
+  if (user && introSeen) {
+    return <RouterProvider router={router} />;
   }
 
-  // Quien ya vio la intro entra con el drawer arriba y no tiene que tocar nada.
-  return <AuthScreen startOpen={seenOnboarding} onOpen={dismissOnboarding} />;
+  // Con sesión activa la portada solo pide un toque: el botón dice "Continuar".
+  return <AuthScreen onIntroSeen={markIntroSeen} />;
 }
 
-export default function App() {
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -76,3 +49,5 @@ export default function App() {
     </QueryClientProvider>
   );
 }
+
+export default App;

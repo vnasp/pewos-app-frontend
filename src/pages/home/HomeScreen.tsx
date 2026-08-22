@@ -1,27 +1,24 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 
-import EventsList from "../components/home/EventsList";
-import TypeFilterTabs from "../components/home/TypeFilterTabs";
-import Spinner from "../components/ui/Spinner";
-import { categoryOrder } from "../constants/categories";
-import { useAuth } from "../context/AuthContext";
-import { useCompletions } from "../hooks/queries";
-import type { EventCategory, HomeEvent } from "../types/events";
-import { today } from "../utils/date";
+import EventsList from "../../components/home/EventsList";
+import TypeFilterTabs from "../../components/home/TypeFilterTabs";
+import Spinner from "../../components/ui/Spinner";
+import { categoryOrder } from "../../constants/categories";
+import { useAuth } from "../../context/AuthContext";
+import { useCompletions } from "../../hooks/queries";
+import { useTodayEvents } from "../../hooks/useTodayEvents";
+import type { EventCategory, HomeEvent } from "../../types/events";
+import { today } from "../../utils/date";
 
-interface HomeScreenProps {
-  /** Ya derivados y ordenados por hora, sin filtrar. */
-  events: HomeEvent[];
-  isLoading: boolean;
-  /** El filtro de mascota vive en el header, que dibuja `AppLayout`. */
-  selectedPetId: string | null;
-}
-
-export default function HomeScreen({
-  events,
-  isLoading,
-  selectedPetId,
-}: HomeScreenProps) {
+function HomeScreen() {
+  // Misma clave de caché que ya pide `AppLayout` para los contadores del header, así
+  // que pedirlos aquí otra vez no es una segunda petición.
+  const { events, isLoading } = useTodayEvents();
+  // El filtro por mascota lo pinta el header pero filtra esta lista: vive en la URL,
+  // que es lo único que las dos mitades comparten sin acoplarse.
+  const [searchParams] = useSearchParams();
+  const selectedPetId = searchParams.get("mascota");
   const { canWrite } = useAuth();
   const todayStr = useMemo(() => today(), []);
   const { isDone, mark, unmark } = useCompletions(todayStr);
@@ -119,3 +116,5 @@ export default function HomeScreen({
     </div>
   );
 }
+
+export default HomeScreen;

@@ -1,16 +1,16 @@
 import { Check, Copy, LogOut, Plus, Trash2, X } from "lucide-react";
 import { useState } from "react";
 
-import * as apiClient from "../api";
-import { ApiError } from "../api";
-import { roleLabels } from "../constants/labels";
-import { useAuth } from "../context/AuthContext";
-import { useTenantMembers } from "../hooks/queries";
-import type { TenantRole } from "../types";
+import * as apiClient from "../../api";
+import { ApiError } from "../../api";
+import { roleLabels } from "../../constants/labels";
+import { useAuth } from "../../context/AuthContext";
+import { useTenantMembers } from "../../hooks/queries";
+import type { TenantRole } from "../../types";
 
 const ASSIGNABLE_ROLES: TenantRole[] = ["owner", "member", "viewer"];
 
-export default function TenantMembersScreen() {
+function TenantMembersScreen() {
   const { user, activeTenant, isOwner, redeemInvitation } = useAuth();
   const {
     members,
@@ -287,3 +287,5 @@ export default function TenantMembersScreen() {
     </div>
   );
 }
+
+export default TenantMembersScreen;

@@ -1,18 +1,14 @@
 import { useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import { today } from "../utils/date";
-import { appointmentTypeLabels, recurrenceLabels } from "../constants/labels";
-import { useAppointments, usePets } from "../hooks/queries";
+import { today } from "../../utils/date";
+import { appointmentTypeLabels, recurrenceLabels } from "../../constants/labels";
+import { useAppointments, usePets } from "../../hooks/queries";
 import type {
   AppointmentType,
   RecurrencePattern,
   NotificationTime,
-} from "../types";
-
-interface AddEditAppointmentScreenProps {
-  appointmentId?: string;
-  onNavigateBack: () => void;
-}
+} from "../../types";
 
 const appointmentTypes: AppointmentType[] = [
   "control",
@@ -39,10 +35,12 @@ const notificationOptions: { value: NotificationTime; label: string }[] = [
   { value: "1day", label: "1 día antes" },
 ];
 
-export default function AddEditAppointmentScreen({
-  appointmentId,
-  onNavigateBack,
-}: AddEditAppointmentScreenProps) {
+function AddEditAppointmentScreen() {
+  const { id: appointmentId } = useParams();
+  const navigate = useNavigate();
+  // Vuelve a una ruta concreta y no con `navigate(-1)`: quien llega por un enlace
+  // compartido no tiene historial atrás y retroceder lo sacaría de la app.
+  const goBack = () => navigate("/agenda");
   const { create, update, byId } = useAppointments();
   const { items: pets } = usePets();
   const isEditing = !!appointmentId;
@@ -108,7 +106,7 @@ export default function AddEditAppointmentScreen({
       if (isEditing && appointmentId)
         await update.mutateAsync({ id: appointmentId, data: data });
       else await create.mutateAsync(data);
-      onNavigateBack();
+      goBack();
     } catch {
       setError("No se pudo guardar");
     } finally {
@@ -120,7 +118,7 @@ export default function AddEditAppointmentScreen({
     <div className="flex flex-col h-full overflow-y-auto pb-6">
       <div className="px-5 pt-5 pb-3 flex items-center gap-2 lg:max-w-3xl lg:mx-auto lg:w-full">
         <button
-          onClick={onNavigateBack}
+          onClick={goBack}
           className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform shrink-0"
         >
           <ArrowLeft size={18} className="text-gray-800" />
@@ -289,3 +287,5 @@ export default function AddEditAppointmentScreen({
     </div>
   );
 }
+
+export default AddEditAppointmentScreen;

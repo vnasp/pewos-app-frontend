@@ -11,23 +11,19 @@ import {
   EyeOff,
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import {
   careTypeColors,
   careTypeLabels,
   notificationTimeLabels,
   weekDayLabels,
-} from "../constants/labels";
-import { daysUntil, shortTime } from "../utils/date";
-import { useCares, usePets } from "../hooks/queries";
-import { useAuth } from "../context/AuthContext";
+} from "../../constants/labels";
+import { daysUntil, shortTime } from "../../utils/date";
+import { useCares, usePets } from "../../hooks/queries";
+import { useAuth } from "../../context/AuthContext";
 
-interface CaresListScreenProps {
-  onNavigateToAddEdit: (careId?: string) => void;
-}
-
-export default function CaresListScreen({
-  onNavigateToAddEdit,
-}: CaresListScreenProps) {
+function CaresListScreen() {
+  const navigate = useNavigate();
   const { canWrite } = useAuth();
   const { items: cares, remove, update } = useCares();
   const { items: pets } = usePets();
@@ -197,7 +193,7 @@ export default function CaresListScreen({
                           {canWrite && (
                             <div className="flex flex-col gap-2 shrink-0">
                               <button
-                                onClick={() => onNavigateToAddEdit(care.id)}
+                                onClick={() => navigate(`/ajustes/cuidados/${care.id}`)}
                                 className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
                               >
                                 <Pencil size={15} className="text-indigo-600" />
@@ -229,3 +225,5 @@ export default function CaresListScreen({
     </div>
   );
 }
+
+export default CaresListScreen;

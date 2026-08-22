@@ -11,19 +11,15 @@ import {
   EyeOff,
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router";
 
-import { exerciseTypeColors, exerciseTypeLabels } from "../constants/labels";
-import { daysUntil, shortTime } from "../utils/date";
-import { useExercises, usePets } from "../hooks/queries";
-import { useAuth } from "../context/AuthContext";
+import { exerciseTypeColors, exerciseTypeLabels } from "../../constants/labels";
+import { daysUntil, shortTime } from "../../utils/date";
+import { useExercises, usePets } from "../../hooks/queries";
+import { useAuth } from "../../context/AuthContext";
 
-interface ExercisesListScreenProps {
-  onNavigateToAddEdit: (exerciseId?: string) => void;
-}
-
-export default function ExercisesListScreen({
-  onNavigateToAddEdit,
-}: ExercisesListScreenProps) {
+function ExercisesListScreen() {
+  const navigate = useNavigate();
   const { canWrite } = useAuth();
   const { items: exercises, remove, update } = useExercises();
   const { items: pets } = usePets();
@@ -159,7 +155,7 @@ export default function ExercisesListScreen({
                           {canWrite && (
                             <div className="flex flex-col gap-2 shrink-0">
                               <button
-                                onClick={() => onNavigateToAddEdit(ex.id)}
+                                onClick={() => navigate(`/ajustes/ejercicios/${ex.id}`)}
                                 className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
                               >
                                 <Pencil size={15} className="text-indigo-600" />
@@ -198,3 +194,5 @@ export default function ExercisesListScreen({
     </div>
   );
 }
+
+export default ExercisesListScreen;

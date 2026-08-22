@@ -14,17 +14,13 @@ import {
   EyeOff,
 } from "lucide-react";
 import { useState } from "react";
-import { useMedications, usePets } from "../hooks/queries";
-import { useAuth } from "../context/AuthContext";
-import { daysUntil, formatShortDate, shortTime } from "../utils/date";
+import { useNavigate } from "react-router";
+import { useMedications, usePets } from "../../hooks/queries";
+import { useAuth } from "../../context/AuthContext";
+import { daysUntil, formatShortDate, shortTime } from "../../utils/date";
 
-interface MedicationsListScreenProps {
-  onNavigateToAddEdit: (medicationId?: string) => void;
-}
-
-export default function MedicationsListScreen({
-  onNavigateToAddEdit,
-}: MedicationsListScreenProps) {
+function MedicationsListScreen() {
+  const navigate = useNavigate();
   const { canWrite } = useAuth();
   const { items: medications, remove, update } = useMedications();
   const { items: pets } = usePets();
@@ -221,7 +217,7 @@ export default function MedicationsListScreen({
                             {canWrite && (
                               <div className="flex flex-col gap-2 shrink-0">
                                 <button
-                                  onClick={() => onNavigateToAddEdit(med.id)}
+                                  onClick={() => navigate(`/ajustes/medicamentos/${med.id}`)}
                                   className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
                                 >
                                   <Pencil size={15} className="text-indigo-600" />
@@ -265,3 +261,5 @@ export default function MedicationsListScreen({
     </div>
   );
 }
+
+export default MedicationsListScreen;

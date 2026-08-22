@@ -1,14 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, Clock, Utensils } from "lucide-react";
-import { addDays, shortTime, today } from "../utils/date";
-import { calculateTimesFromHours } from "../utils/schedule";
-import type { ScheduleType, NotificationTime } from "../types";
-import { useMealTimes, useMedications, usePets } from "../hooks/queries";
-
-interface AddEditMedicationScreenProps {
-  medicationId?: string;
-  onNavigateBack: () => void;
-}
+import { addDays, shortTime, today } from "../../utils/date";
+import { calculateTimesFromHours } from "../../utils/schedule";
+import type { ScheduleType, NotificationTime } from "../../types";
+import { useMealTimes, useMedications, usePets } from "../../hooks/queries";
 
 const notificationOptions: { value: NotificationTime; label: string }[] = [
   { value: "none", label: "Sin notificación" },
@@ -19,10 +15,12 @@ const notificationOptions: { value: NotificationTime; label: string }[] = [
   { value: "1day", label: "1 día antes" },
 ];
 
-export default function AddEditMedicationScreen({
-  medicationId,
-  onNavigateBack,
-}: AddEditMedicationScreenProps) {
+function AddEditMedicationScreen() {
+  const { id: medicationId } = useParams();
+  const navigate = useNavigate();
+  // Vuelve a una ruta concreta y no con `navigate(-1)`: quien llega por un enlace
+  // compartido no tiene historial atrás y retroceder lo sacaría de la app.
+  const goBack = () => navigate("/ajustes/medicamentos");
   const { create, update, byId } = useMedications();
   const { items: mealTimes } = useMealTimes();
   const { items: pets } = usePets();
@@ -145,7 +143,7 @@ export default function AddEditMedicationScreen({
       };
       if (isEditing && medicationId) await update.mutateAsync({ id: medicationId, data: data });
       else await create.mutateAsync(data);
-      onNavigateBack();
+      goBack();
     } catch {
       setError("No se pudo guardar");
     } finally {
@@ -157,7 +155,7 @@ export default function AddEditMedicationScreen({
     <div className="flex flex-col h-full overflow-y-auto pb-6">
       <div className="px-5 pt-5 pb-3 flex items-center gap-2 lg:max-w-3xl lg:mx-auto lg:w-full">
         <button
-          onClick={onNavigateBack}
+          onClick={goBack}
           className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform shrink-0"
         >
           <ArrowLeft size={18} className="text-gray-800" />
@@ -407,3 +405,5 @@ export default function AddEditMedicationScreen({
     </div>
   );
 }
+
+export default AddEditMedicationScreen;
