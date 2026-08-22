@@ -15,7 +15,7 @@ interface TypeFilterTabsProps {
  * Estos botones existían como "accesos rápidos" que navegaban a las pantallas de listado, que
  * no era lo que se buscaba. Esas pantallas siguen accesibles desde Ajustes.
  */
-export default function TypeFilterTabs({
+function TypeFilterTabs({
   selected,
   onSelect,
   totalCount,
@@ -57,3 +57,5 @@ export default function TypeFilterTabs({
     </div>
   );
 }
+
+export default TypeFilterTabs;

@@ -17,7 +17,7 @@ import {
 import { formatLongDate, shortTime } from "../../utils/date";
 import { useAuth } from "../../context/AuthContext";
 
-export default function AppointmentCard({
+function AppointmentCard({
   apt,
   onEdit,
   onDelete,
@@ -100,3 +100,5 @@ export default function AppointmentCard({
     </div>
   );
 }
+
+export default AppointmentCard;

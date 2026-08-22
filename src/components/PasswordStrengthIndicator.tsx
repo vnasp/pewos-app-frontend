@@ -13,7 +13,7 @@ const strengthColors = [
 
 const strengthLabels = ["Muy débil", "Débil", "Regular", "Buena", "Fuerte"];
 
-export default function PasswordStrengthIndicator({
+function PasswordStrengthIndicator({
   password,
 }: {
   password: string;
@@ -61,3 +61,5 @@ export default function PasswordStrengthIndicator({
     </div>
   );
 }
+
+export default PasswordStrengthIndicator;

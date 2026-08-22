@@ -12,7 +12,7 @@ interface PetFilterTabsProps {
 }
 
 /** Filtro por mascota. Va sobre el degradado del header, de ahí el tono claro. */
-export default function PetFilterTabs({
+function PetFilterTabs({
   pets,
   selectedPetId,
   onSelect,
@@ -63,3 +63,5 @@ export default function PetFilterTabs({
     </div>
   );
 }
+
+export default PetFilterTabs;

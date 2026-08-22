@@ -26,7 +26,7 @@ function startOfDay(d: Date) {
   return c;
 }
 
-export default function CalendarMonthView({
+function CalendarMonthView({
   appointments,
   selectedDate,
   onDaySelect,
@@ -182,3 +182,5 @@ function dotColor(type: string): string {
   };
   return map[type] ?? "#6366f1";
 }
+
+export default CalendarMonthView;

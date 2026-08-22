@@ -13,7 +13,7 @@ interface HeaderProps {
   children?: ReactNode;
 }
 
-export default function Header({
+function Header({
   title,
   date,
   onBack,
@@ -66,3 +66,5 @@ export default function Header({
     </header>
   );
 }
+
+export default Header;
