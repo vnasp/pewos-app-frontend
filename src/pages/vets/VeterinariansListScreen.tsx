@@ -2,6 +2,7 @@ import { Stethoscope, Pencil, Trash2, Phone, Mail, MapPin } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { usePets, useVeterinarians } from "../../hooks/queries";
+import ConfirmSheet from "../../components/ui/ConfirmSheet";
 import { useAuth } from "../../context/AuthContext";
 
 function VeterinariansListScreen() {
@@ -11,10 +12,9 @@ function VeterinariansListScreen() {
   const { items: pets } = usePets();
   const [selectedPetId, setSelectedDogId] = useState<string | null>(null);
 
-  const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`¿Eliminar veterinario ${name}?`))
-      remove.mutate(id);
-  };
+  const [toDelete, setToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  const handleDelete = (id: string, name: string) => setToDelete({ id, name });
 
   const filteredVets = selectedPetId
     ? veterinarians.filter((v) => v.pet_id === selectedPetId)
@@ -165,6 +165,15 @@ function VeterinariansListScreen() {
           )}
         </div>
       )}
+
+      <ConfirmSheet
+        open={toDelete !== null}
+        onClose={() => setToDelete(null)}
+        onConfirm={() => toDelete && remove.mutate(toDelete.id)}
+        title={`¿Eliminar a ${toDelete?.name ?? "este veterinario"}?`}
+        description="Se borra su ficha de contacto. Las citas que ya registraste no se ven afectadas."
+        confirmLabel="Eliminar"
+      />
     </div>
   );
 }

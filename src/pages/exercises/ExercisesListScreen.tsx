@@ -16,6 +16,7 @@ import { useNavigate } from "react-router";
 import { exerciseTypeColors, exerciseTypeLabels } from "../../constants/labels";
 import { daysUntil, shortTime } from "../../utils/date";
 import { useExercises, usePets } from "../../hooks/queries";
+import ConfirmSheet from "../../components/ui/ConfirmSheet";
 import { useAuth } from "../../context/AuthContext";
 
 function ExercisesListScreen() {
@@ -25,10 +26,11 @@ function ExercisesListScreen() {
   const { items: pets } = usePets();
   const [showFinished, setShowFinished] = useState(false);
 
-  const handleDelete = (id: string, petName: string) => {
-    if (window.confirm(`¿Eliminar esta rutina de ${petName}?`))
-      remove.mutate(id);
-  };
+  const [toDelete, setToDelete] = useState<{ id: string; petName: string } | null>(
+    null,
+  );
+
+  const handleDelete = (id: string, petName: string) => setToDelete({ id, petName });
 
   const isFinished = (e: (typeof exercises)[number]) =>
     !e.is_permanent && daysUntil(e.end_date) < 0;
@@ -191,6 +193,15 @@ function ExercisesListScreen() {
           </div>
         )}
       </div>
+
+      <ConfirmSheet
+        open={toDelete !== null}
+        onClose={() => setToDelete(null)}
+        onConfirm={() => toDelete && remove.mutate(toDelete.id)}
+        title={`¿Eliminar esta rutina de ${toDelete?.petName ?? "la mascota"}?`}
+        description="Se borrará también el registro de las veces que se marcó como completado. No se puede deshacer."
+        confirmLabel="Eliminar"
+      />
     </div>
   );
 }

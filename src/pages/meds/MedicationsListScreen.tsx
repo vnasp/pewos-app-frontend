@@ -16,6 +16,7 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useMedications, usePets } from "../../hooks/queries";
+import ConfirmSheet from "../../components/ui/ConfirmSheet";
 import { useAuth } from "../../context/AuthContext";
 import { daysUntil, formatShortDate, shortTime } from "../../utils/date";
 
@@ -26,10 +27,14 @@ function MedicationsListScreen() {
   const { items: pets } = usePets();
   const [showFinished, setShowFinished] = useState(false);
 
-  const handleDelete = (id: string, petName: string, name: string) => {
-    if (window.confirm(`¿Eliminar ${name} de ${petName}?`))
-      remove.mutate(id);
-  };
+  const [toDelete, setToDelete] = useState<{
+    id: string;
+    name: string;
+    petName: string;
+  } | null>(null);
+
+  const handleDelete = (id: string, petName: string, name: string) =>
+    setToDelete({ id, name, petName });
 
   const finishedCount = medications.filter((m) => {
     const isContinuous = m.duration_days === 0;
@@ -258,6 +263,15 @@ function MedicationsListScreen() {
           </div>
         )}
       </div>
+
+      <ConfirmSheet
+        open={toDelete !== null}
+        onClose={() => setToDelete(null)}
+        onConfirm={() => toDelete && remove.mutate(toDelete.id)}
+        title={`¿Eliminar ${toDelete?.name ?? "este medicamento"}?`}
+        description={`${toDelete?.petName ? `Es de ${toDelete.petName}. ` : ""}Se borrará también el registro de las veces que se marcó como completado. No se puede deshacer.`}
+        confirmLabel="Eliminar"
+      />
     </div>
   );
 }

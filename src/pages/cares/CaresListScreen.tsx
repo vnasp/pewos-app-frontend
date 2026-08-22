@@ -20,6 +20,7 @@ import {
 } from "../../constants/labels";
 import { daysUntil, shortTime } from "../../utils/date";
 import { useCares, usePets } from "../../hooks/queries";
+import ConfirmSheet from "../../components/ui/ConfirmSheet";
 import { useAuth } from "../../context/AuthContext";
 
 function CaresListScreen() {
@@ -29,9 +30,11 @@ function CaresListScreen() {
   const { items: pets } = usePets();
   const [showFinished, setShowFinished] = useState(false);
 
-  const handleDelete = (id: string, petName: string) => {
-    if (window.confirm(`¿Eliminar este cuidado de ${petName}?`)) remove.mutate(id);
-  };
+  const [toDelete, setToDelete] = useState<{ id: string; petName: string } | null>(
+    null,
+  );
+
+  const handleDelete = (id: string, petName: string) => setToDelete({ id, petName });
 
   const isFinished = (c: (typeof cares)[number]) =>
     !c.is_permanent && daysUntil(c.end_date) < 0;
@@ -222,6 +225,15 @@ function CaresListScreen() {
           </div>
         )}
       </div>
+
+      <ConfirmSheet
+        open={toDelete !== null}
+        onClose={() => setToDelete(null)}
+        onConfirm={() => toDelete && remove.mutate(toDelete.id)}
+        title={`¿Eliminar este cuidado de ${toDelete?.petName ?? "la mascota"}?`}
+        description="Se borrará también el registro de las veces que se marcó como completado. No se puede deshacer."
+        confirmLabel="Eliminar"
+      />
     </div>
   );
 }

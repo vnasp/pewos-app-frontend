@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import CalendarMonthView from "../../components/calendar/CalendarMonthView";
 import AppointmentCard from "../../components/calendar/AppointmentCard";
+import ConfirmSheet from "../../components/ui/ConfirmSheet";
 import { useAppointments, usePets } from "../../hooks/queries";
 import { formatLocalDate, parseLocalDate, shortTime } from "../../utils/date";
 
@@ -129,10 +130,8 @@ function CalendarListScreen() {
   }, [expandedAppointments, selectedCalDate]);
 
   // Agrupación por mes para la vista "próximas"
-  const handleDelete = async (id: string) => {
-    if (window.confirm("¿Estás seguro de eliminar esta cita?"))
-      await remove.mutate(id);
-  };
+  const [toDelete, setToDelete] = useState<string | null>(null);
+  const handleDelete = (id: string) => setToDelete(id);
 
   const filtered = (() => {
     const todayStr = formatLocalDate(new Date());
@@ -343,6 +342,15 @@ function CalendarListScreen() {
           </div>
         </>
       )}
+
+      <ConfirmSheet
+        open={toDelete !== null}
+        onClose={() => setToDelete(null)}
+        onConfirm={() => toDelete && remove.mutate(toDelete)}
+        title="¿Eliminar esta cita?"
+        description="Se borra también el registro de si se asistió. No se puede deshacer."
+        confirmLabel="Eliminar"
+      />
     </div>
   );
 }
