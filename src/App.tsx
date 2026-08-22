@@ -6,8 +6,7 @@ import AppLayout from "./components/AppLayout";
 import Spinner from "./components/ui/Spinner";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { usePwaUpdate } from "./hooks/usePwaUpdate";
-import LoginScreen from "./screens/LoginScreen";
-import OnboardingScreen from "./screens/OnboardingScreen";
+import AuthScreen from "./screens/AuthScreen";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,13 +63,8 @@ function AppContent() {
     return <AppLayout />;
   }
 
-  // El botón del onboarding dice "Iniciar sesión", así que solo tiene sentido
-  // mostrarlo cuando efectivamente no hay sesión.
-  if (!seenOnboarding) {
-    return <OnboardingScreen onContinue={dismissOnboarding} />;
-  }
-
-  return <LoginScreen />;
+  // Quien ya vio la intro entra con el drawer arriba y no tiene que tocar nada.
+  return <AuthScreen startOpen={seenOnboarding} onOpen={dismissOnboarding} />;
 }
 
 export default function App() {
