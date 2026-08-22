@@ -29,7 +29,7 @@ function TabBar({ className = "" }: TabBarProps) {
   return (
     <nav
       aria-label="Navegación principal"
-      className={`z-30 mx-3 mt-3 mb-[calc(0.75rem+env(safe-area-inset-bottom))] flex gap-1 rounded-sheet bg-white p-1.5 shadow-float lg:mx-0 lg:mt-0 lg:mb-0 lg:w-24 lg:shrink-0 lg:flex-col lg:justify-start lg:gap-2 lg:rounded-none lg:p-3 lg:pt-8 lg:shadow-none lg:border-e lg:border-line ${className}`}
+      className={`z-30 mx-3 mt-3 mb-[calc(0.75rem+env(safe-area-inset-bottom))] flex gap-1 rounded-2xl bg-white p-1.5 shadow-float lg:mx-0 lg:mt-0 lg:mb-0 lg:w-24 lg:shrink-0 lg:flex-col lg:justify-start lg:gap-2 lg:rounded-none lg:p-3 lg:pt-8 lg:shadow-none lg:border-e lg:border-line ${className}`}
     >
       {tabs.map(({ id, label, icon: Icon, path }) => {
         const isActive = currentTab === id;

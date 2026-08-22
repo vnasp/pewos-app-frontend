@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { today } from "../../utils/date";
 import { appointmentTypeLabels, recurrenceLabels } from "../../constants/labels";
-import { useAppointments, usePets } from "../../hooks/queries";
+import { useAppointments, usePetOptions } from "../../hooks/queries";
 import type {
   AppointmentType,
   RecurrencePattern,
@@ -42,11 +42,11 @@ function AddEditAppointmentScreen() {
   // compartido no tiene historial atrás y retroceder lo sacaría de la app.
   const goBack = () => navigate("/agenda");
   const { create, update, byId } = useAppointments();
-  const { items: pets } = usePets();
   const isEditing = !!appointmentId;
   const existing = appointmentId
     ? byId(appointmentId)
     : undefined;
+  const pets = usePetOptions(existing?.pet_id);
 
   const [selectedPetId, setSelectedDogId] = useState(
     existing?.pet_id ?? pets[0]?.id ?? "",

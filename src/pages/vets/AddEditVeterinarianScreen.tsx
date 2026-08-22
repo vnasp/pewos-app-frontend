@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import { usePets, useVeterinarians } from "../../hooks/queries";
+import { usePetOptions, useVeterinarians } from "../../hooks/queries";
 
 function AddEditVeterinarianScreen() {
   const { id: veterinarianId } = useParams();
@@ -10,11 +10,11 @@ function AddEditVeterinarianScreen() {
   // compartido no tiene historial atrás y retroceder lo sacaría de la app.
   const goBack = () => navigate("/veterinarios");
   const { create, update, byId } = useVeterinarians();
-  const { items: pets } = usePets();
   const isEditing = !!veterinarianId;
   const existing = veterinarianId
     ? byId(veterinarianId)
     : undefined;
+  const pets = usePetOptions(existing?.pet_id);
 
   const [selectedPetId, setSelectedDogId] = useState(
     existing?.pet_id ?? pets[0]?.id ?? "",

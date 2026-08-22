@@ -5,7 +5,7 @@ import { calculateScheduledTimes } from "../../utils/schedule";
 import { formatLocalDate, parseLocalDate, shortTime, today } from "../../utils/date";
 import type { ExerciseType, NotificationTime } from "../../types";
 import { exerciseTypeColors, exerciseTypeLabels } from "../../constants/labels";
-import { useExercises, usePets } from "../../hooks/queries";
+import { useExercises, usePetOptions } from "../../hooks/queries";
 
 const exerciseTypes: ExerciseType[] = [
   "caminata",
@@ -32,9 +32,9 @@ function AddEditExerciseScreen() {
   // compartido no tiene historial atrás y retroceder lo sacaría de la app.
   const goBack = () => navigate("/ajustes/ejercicios");
   const { create, update, byId } = useExercises();
-  const { items: pets } = usePets();
   const isEditing = !!exerciseId;
   const existing = exerciseId ? byId(exerciseId) : undefined;
+  const pets = usePetOptions(existing?.pet_id);
 
   const [selectedPetId, setSelectedDogId] = useState(
     existing?.pet_id ?? pets[0]?.id ?? "",

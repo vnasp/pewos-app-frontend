@@ -57,7 +57,8 @@ export type CompletionItemType =
 export interface User {
   id: string;
   email: string;
-  display_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
 }
 
 export interface Membership {
@@ -76,7 +77,8 @@ export interface Session {
 export interface TenantMember {
   user_id: string;
   email: string;
-  display_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   role: TenantRole;
   joined_at: string;
 }
@@ -101,6 +103,21 @@ export interface Pet {
   neutered: boolean;
   photo_key: string | null;
   photo_url: string | null;
+  /** Último pesaje. Llega como texto: la API lo serializa desde un Numeric. */
+  weight_kg: string | null;
+  weight_recorded_on: string | null;
+  /** Con fecha, la mascota está archivada: conserva todo pero no recuerda nada. */
+  archived_on: string | null;
+  archived_reason: ArchiveReason | null;
+}
+
+export type ArchiveReason = "deceased" | "rehomed" | "other";
+
+export interface PetWeight {
+  id: string;
+  pet_id: string;
+  weight_kg: string;
+  recorded_on: string;
 }
 
 export interface Appointment {
@@ -180,6 +197,7 @@ export interface Care {
 
 export interface MealTime {
   id: string;
+  pet_id: string;
   name: string;
   time: string;
   order_index: number;

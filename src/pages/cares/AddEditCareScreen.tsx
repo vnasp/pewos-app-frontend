@@ -5,7 +5,7 @@ import { calculateScheduledTimes } from "../../utils/schedule";
 import { formatLocalDate, parseLocalDate, shortTime, today } from "../../utils/date";
 import type { CareType, NotificationTime } from "../../types";
 import { careTypeLabels } from "../../constants/labels";
-import { useCares, usePets } from "../../hooks/queries";
+import { useCares, usePetOptions } from "../../hooks/queries";
 
 const careTypes: CareType[] = [
   "limpieza_herida",
@@ -32,9 +32,9 @@ function AddEditCareScreen() {
   // compartido no tiene historial atrás y retroceder lo sacaría de la app.
   const goBack = () => navigate("/ajustes/cuidados");
   const { create, update, byId } = useCares();
-  const { items: pets } = usePets();
   const isEditing = !!careId;
   const existing = careId ? byId(careId) : undefined;
+  const pets = usePetOptions(existing?.pet_id);
 
   const [selectedPetId, setSelectedDogId] = useState(
     existing?.pet_id ?? pets[0]?.id ?? "",

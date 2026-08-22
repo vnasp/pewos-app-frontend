@@ -21,6 +21,7 @@ const load = {
   settings: () => import("./pages/settings/SettingsScreen"),
   mealTimes: () => import("./pages/settings/MealTimesSettingsScreen"),
   members: () => import("./pages/settings/TenantMembersScreen"),
+  profile: () => import("./pages/settings/ProfileScreen"),
   medsList: () => import("./pages/meds/MedicationsListScreen"),
   medForm: () => import("./pages/meds/AddEditMedicationScreen"),
   exercisesList: () => import("./pages/exercises/ExercisesListScreen"),
@@ -38,6 +39,7 @@ const AddEditPetScreen = lazy(load.petForm);
 const SettingsScreen = lazy(load.settings);
 const MealTimesSettingsScreen = lazy(load.mealTimes);
 const TenantMembersScreen = lazy(load.members);
+const ProfileScreen = lazy(load.profile);
 const MedicationsListScreen = lazy(load.medsList);
 const AddEditMedicationScreen = lazy(load.medForm);
 const ExercisesListScreen = lazy(load.exercisesList);
@@ -60,8 +62,11 @@ const preloaders: Record<string, () => Promise<unknown>> = {
   "/mascotas": load.petsList,
   "/mascotas/nueva": load.petForm,
   "/ajustes": load.settings,
-  "/ajustes/horarios": load.mealTimes,
+  // Única clave que es un patrón y no una ruta concreta: la mascota va en el path, así
+  // que no hay un literal que calentar. `preloadOn` solo la usa como llave del mapa.
+  "/mascotas/:id/horarios": load.mealTimes,
   "/ajustes/grupo": load.members,
+  "/ajustes/perfil": load.profile,
   "/ajustes/medicamentos": load.medsList,
   "/ajustes/medicamentos/nuevo": load.medForm,
   "/ajustes/ejercicios": load.exercisesList,
@@ -171,24 +176,32 @@ export const router = createBrowserRouter([
       },
 
       {
+        path: "mascotas/:id/horarios",
+        element: <MealTimesSettingsScreen />,
+        handle: handle({
+          title: "Horarios de comida",
+          // Se entra desde la tarjeta de la mascota, no desde Ajustes: los horarios son
+          // de cada mascota y esa lista no tiene forma de decir de cuál.
+          tab: "pets",
+          parent: "/mascotas",
+          requiresPet: true,
+        }),
+      },
+
+      {
         path: "ajustes",
         element: <SettingsScreen />,
         handle: handle({ title: "Ajustes", tab: "settings" }),
       },
       {
-        path: "ajustes/horarios",
-        element: <MealTimesSettingsScreen />,
-        handle: handle({
-          title: "Horarios de comida",
-          tab: "settings",
-          parent: "/ajustes",
-          requiresPet: true,
-        }),
-      },
-      {
         path: "ajustes/grupo",
         element: <TenantMembersScreen />,
         handle: handle({ title: "Mi grupo", tab: "settings", parent: "/ajustes" }),
+      },
+      {
+        path: "ajustes/perfil",
+        element: <ProfileScreen />,
+        handle: handle({ title: "Mi perfil", tab: "settings", parent: "/ajustes" }),
       },
 
       {

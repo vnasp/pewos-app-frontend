@@ -17,7 +17,7 @@ import PetFilterTabs from "./PetFilterTabs";
  * "los recordatorios de Luna" se puede mandar.
  */
 function HomePetFilter() {
-  const { items: pets } = usePets();
+  const { active: pets } = usePets();
   const { events } = useTodayEvents();
   const [searchParams, setSearchParams] = useSearchParams();
 

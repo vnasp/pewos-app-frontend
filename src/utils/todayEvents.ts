@@ -11,7 +11,11 @@ interface DeriveInput {
   todayStr: string;
   /** 0=Domingo … 6=Sábado, igual que `Date.getDay()`. */
   dayOfWeek: number;
+  /** Mascotas archivadas: no recuerdan nada, ni siquiera lo que quedó programado. */
+  archivedPetIds?: ReadonlySet<string>;
 }
+
+const NONE_ARCHIVED: ReadonlySet<string> = new Set();
 
 /** Días entre dos fechas ISO. Negativo si `to` es anterior a `from`. */
 function daysBetween(from: string, to: string): number {
@@ -39,8 +43,21 @@ export function deriveTodayEvents({
   cares,
   todayStr,
   dayOfWeek,
+  archivedPetIds = NONE_ARCHIVED,
 }: DeriveInput): HomeEvent[] {
-  const todayAppointments: HomeEvent[] = appointments
+  /**
+   * Una mascota archivada no recuerda nada.
+   *
+   * No basta con que sus pautas queden inactivas al archivarla: reactivar una a mano
+   * volvería a hacerla sonar, y las citas ni siquiera tienen `is_active` con el que
+   * apagarse. El filtro por mascota es el que sostiene la regla de verdad.
+   */
+  const active = <T extends { pet_id: string }>(items: T[]): T[] =>
+    archivedPetIds.size === 0
+      ? items
+      : items.filter((item) => !archivedPetIds.has(item.pet_id));
+
+  const todayAppointments: HomeEvent[] = active(appointments)
     .filter((a) => a.date === todayStr)
     .map((a) => ({
       type: "appointment",
@@ -50,7 +67,7 @@ export function deriveTodayEvents({
       data: a,
     }));
 
-  const todayMedications: HomeEvent[] = medications
+  const todayMedications: HomeEvent[] = active(medications)
     .filter((m) => {
       if (!m.is_active) return false;
       if (m.start_date > todayStr) return false;
@@ -79,7 +96,7 @@ export function deriveTodayEvents({
       }),
     );
 
-  const todayExercises: HomeEvent[] = exercises
+  const todayExercises: HomeEvent[] = active(exercises)
     .filter((e) => {
       if (!e.is_active) return false;
       if (e.start_date > todayStr) return false;
@@ -101,7 +118,7 @@ export function deriveTodayEvents({
       }),
     );
 
-  const todayCares: HomeEvent[] = cares
+  const todayCares: HomeEvent[] = active(cares)
     .filter((c) => {
       if (!c.is_active) return false;
       if (c.start_date > todayStr) return false;

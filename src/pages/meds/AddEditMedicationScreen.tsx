@@ -4,7 +4,7 @@ import { ArrowLeft, Clock, Utensils } from "lucide-react";
 import { addDays, shortTime, today } from "../../utils/date";
 import { calculateTimesFromHours } from "../../utils/schedule";
 import type { ScheduleType, NotificationTime } from "../../types";
-import { useMealTimes, useMedications, usePets } from "../../hooks/queries";
+import { useMealTimes, useMedications, usePetOptions } from "../../hooks/queries";
 
 const notificationOptions: { value: NotificationTime; label: string }[] = [
   { value: "none", label: "Sin notificación" },
@@ -22,10 +22,9 @@ function AddEditMedicationScreen() {
   // compartido no tiene historial atrás y retroceder lo sacaría de la app.
   const goBack = () => navigate("/ajustes/medicamentos");
   const { create, update, byId } = useMedications();
-  const { items: mealTimes } = useMealTimes();
-  const { items: pets } = usePets();
   const isEditing = !!medicationId;
   const existing = medicationId ? byId(medicationId) : undefined;
+  const pets = usePetOptions(existing?.pet_id);
 
   const [selectedPetId, setSelectedDogId] = useState(
     existing?.pet_id ?? pets[0]?.id ?? "",
@@ -44,6 +43,8 @@ function AddEditMedicationScreen() {
   const [selectedMealIds, setSelectedMealIds] = useState<string[]>(
     existing?.meal_time_ids ?? [],
   );
+  // Los horarios son de la mascota, así que cambiarla cambia las opciones.
+  const { items: mealTimes } = useMealTimes(selectedPetId);
   const [durationDays, setDurationDays] = useState(
     existing?.duration_days?.toString() ?? "30",
   );
@@ -175,7 +176,12 @@ function AddEditMedicationScreen() {
             {pets.map((pet) => (
               <button
                 key={pet.id}
-                onClick={() => setSelectedDogId(pet.id)}
+                onClick={() => {
+                  setSelectedDogId(pet.id);
+                  // Los horarios marcados eran de la otra mascota, y la API los rechaza:
+                  // limpiarlos evita un 400 que el usuario no sabría interpretar.
+                  if (pet.id !== selectedPetId) setSelectedMealIds([]);
+                }}
                 className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${selectedPetId === pet.id ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
               >
                 {pet.name}

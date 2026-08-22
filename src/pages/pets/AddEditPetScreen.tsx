@@ -1,11 +1,18 @@
-import { ArrowLeft, Camera } from "lucide-react";
-import { useRef, useState } from "react";
+import { ArchiveRestore, ArrowLeft, Camera, Heart, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
 import * as apiClient from "../../api";
-import { usePets } from "../../hooks/queries";
+import { usePets, useRecordWeight } from "../../hooks/queries";
 import type { Pet } from "../../types";
-import { today } from "../../utils/date";
+import ArchivePetSheet from "../../components/pets/ArchivePetSheet";
+import PetPhoto from "../../components/pets/PetPhoto";
+import Button from "../../components/ui/Button";
+import ConfirmSheet from "../../components/ui/ConfirmSheet";
+import { useAuth } from "../../context/AuthContext";
+import { archiveReasonSummary } from "../../constants/labels";
+import { formatLongDate, formatShortDate, today } from "../../utils/date";
+import { preparePhoto } from "../../utils/image";
 
 function AddEditPetScreen() {
   const { id: petId } = useParams();
@@ -13,7 +20,9 @@ function AddEditPetScreen() {
   // Vuelve a una ruta concreta y no con `navigate(-1)`: quien llega por un enlace
   // compartido no tiene historial atrás y retroceder lo sacaría de la app.
   const goBack = () => navigate("/mascotas");
-  const { create, update, byId } = usePets();
+  const { create, update, remove, archive, unarchive, byId } = usePets();
+  const recordWeight = useRecordWeight();
+  const { canWrite } = useAuth();
   // Si la mascota se creó pero la foto falló, seguimos en el formulario con su id a
   // mano: sin esto, volver a guardar crearía una segunda mascota idéntica.
   const [savedId, setSavedId] = useState<string | null>(null);
@@ -26,51 +35,74 @@ function AddEditPetScreen() {
   const [birthDate, setBirthDate] = useState(existing?.birth_date ?? today());
   const [gender, setGender] = useState<"male" | "female">(existing?.gender ?? "male");
   const [neutered, setNeutered] = useState(existing?.neutered ?? false);
+  const [weight, setWeight] = useState(existing?.weight_kg ?? "");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
-  // Vista previa local mientras no se ha subido; la definitiva llega en `photo_url`.
-  const [preview, setPreview] = useState<string | null>(existing?.photo_url ?? null);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const reason = (err: unknown, fallback: string) =>
+    err instanceof Error ? err.message : fallback;
+
+  const [pendingPhoto, setPendingPhoto] = useState<Blob | null>(null);
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
+  const [preparing, setPreparing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handlePickImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Derivada y no en estado: `existing` llega con la consulta, y guardarla en un
+  // `useState` congelaría el primer render, cuando todavía no hay mascota que mostrar.
+  const preview = localPreview ?? existing?.photo_url ?? null;
+
+  // La URL local ocupa memoria hasta que se revoca, y acá se reemplaza cada vez que se
+  // elige otra foto.
+  useEffect(() => {
+    if (!localPreview) return;
+    return () => URL.revokeObjectURL(localPreview);
+  }, [localPreview]);
+
+  const handlePickImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    // Limpiar el input deja que elegir el mismo archivo otra vez vuelva a disparar
+    // `change`, que es lo que uno intenta después de un error.
+    e.target.value = "";
     if (!file) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setError("La foto debe ser JPG, PNG o WebP");
-      return;
-    }
+
     setError(null);
-    setPendingFile(file);
-    setPreview(URL.createObjectURL(file));
+    setPreparing(true);
+    try {
+      // La vista previa es ya la imagen procesada, así que lo que ves es lo que sube.
+      const photo = await preparePhoto(file);
+      setPendingPhoto(photo);
+      setLocalPreview(URL.createObjectURL(photo));
+    } catch (err) {
+      setError(reason(err, "No se pudo leer la imagen"));
+    } finally {
+      setPreparing(false);
+    }
   };
 
   /**
-   * Sube la foto directo a S3 con una URL prefirmada. El archivo no pasa por la API, que
-   * corre en una instancia chica; antes la imagen se guardaba como base64 en la base.
+   * Sube a S3 la imagen ya procesada, con una URL prefirmada. El archivo no pasa por la
+   * API, que corre en una instancia chica; antes se guardaba como base64 en la base.
    */
   const uploadPhoto = async (targetPetId: string): Promise<string | null> => {
-    if (!pendingFile) return null;
+    if (!pendingPhoto) return null;
     const { upload_url, photo_key } = await apiClient.pets.photoUploadUrl(
       targetPetId,
-      pendingFile.type,
+      pendingPhoto.type,
     );
     // `fetch` solo rechaza por red o por CORS; un 403 de S3 llega como respuesta normal.
     // Distinguirlos importa porque el CORS del bucket es lo que más se olvida configurar.
     const response = await fetch(upload_url, {
       method: "PUT",
-      body: pendingFile,
-      headers: { "Content-Type": pendingFile.type },
+      body: pendingPhoto,
+      headers: { "Content-Type": pendingPhoto.type },
     }).catch(() => {
       throw new Error("no se pudo contactar el bucket (revisa su configuración de CORS)");
     });
     if (!response.ok) throw new Error(`S3 respondió ${response.status}`);
     return photo_key;
   };
-
-  const reason = (err: unknown, fallback: string) =>
-    err instanceof Error ? err.message : fallback;
 
   /**
    * La mascota y su foto se guardan en dos pasos que fallan por separado.
@@ -109,6 +141,17 @@ function AddEditPetScreen() {
       }
 
       try {
+        // Solo si cambió: reguardar el formulario sin tocar el peso no debe registrar
+        // un pesaje de hoy repitiendo el número del mes pasado.
+        if (weight.trim() && weight.trim() !== existing?.weight_kg) {
+          await recordWeight.mutateAsync({
+            petId: saved.id,
+            weight: weight.trim(),
+            // La fecha del navegador, no la del servidor, que corre en UTC.
+            on: today(),
+          });
+        }
+
         const photoKey = await uploadPhoto(saved.id);
         if (photoKey) {
           await update.mutateAsync({ id: saved.id, data: { ...data, photo_key: photoKey } });
@@ -147,17 +190,18 @@ function AddEditPetScreen() {
         <div className="flex flex-col items-center py-2">
           <button
             onClick={() => fileRef.current?.click()}
-            className="active:scale-95 transition-transform"
+            disabled={preparing}
+            className="active:scale-95 transition-transform disabled:opacity-60"
           >
             <div className="w-28 h-28 bg-gray-200 rounded-full overflow-hidden flex items-center justify-center">
-              {preview ? (
-                <img src={preview} alt="foto" className="w-full h-full object-cover" />
-              ) : (
-                <Camera size={36} className="text-gray-400" />
-              )}
+              <PetPhoto
+                url={preview}
+                alt={name || "foto"}
+                fallback={<Camera size={36} className="text-gray-400" />}
+              />
             </div>
             <p className="text-indigo-600 text-sm font-semibold text-center mt-2">
-              {preview ? "Cambiar foto" : "Agregar foto"}
+              {preparing ? "Procesando..." : preview ? "Cambiar foto" : "Agregar foto"}
             </p>
           </button>
           <input
@@ -202,16 +246,40 @@ function AddEditPetScreen() {
         </div>
 
         <div>
+          <label className="text-gray-700 font-semibold text-sm block mb-1">
+            Peso actual (kg)
+          </label>
+          <input
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+            placeholder="Ej: 8,4"
+            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
+          />
+          <p className="text-gray-500 text-xs mt-1">
+            {existing?.weight_recorded_on
+              ? `Último registro: ${formatShortDate(existing.weight_recorded_on)}`
+              : "Se guarda con la fecha de hoy y queda en el historial."}
+          </p>
+        </div>
+
+        <div>
           <label className="text-gray-700 font-semibold text-sm block mb-2">Género</label>
           <div className="flex gap-2">
             {(["male", "female"] as const).map((g) => (
-              <button
-                key={g}
-                onClick={() => setGender(g)}
-                className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-colors ${gender === g ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
-              >
-                {g === "male" ? "Macho" : "Hembra"}
-              </button>
+              <div key={g} className="flex-1">
+                <Button
+                  variant="secondary"
+                  selected={gender === g}
+                  onClick={() => setGender(g)}
+                  block
+                >
+                  {g === "male" ? "Macho" : "Hembra"}
+                </Button>
+              </div>
             ))}
           </div>
         </div>
@@ -236,12 +304,83 @@ function AddEditPetScreen() {
 
         <button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || preparing}
           className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl text-base disabled:opacity-60 active:scale-95 transition-transform mt-2"
         >
           {saving ? "Guardando..." : isEditing ? "Guardar cambios" : "Agregar mascota"}
         </button>
+
+        {/* Solo al editar, y separado por una línea: ni archivar ni borrar son
+            alternativas a guardar, y en la lista el rojo estaba a un toque de distancia. */}
+        {isEditing && canWrite && (
+          <div className="border-t border-gray-200 pt-5 mt-3 flex flex-col gap-3">
+            {existing?.archived_on ? (
+              <>
+                <p className="text-sm text-muted font-medium text-center">
+                  {existing.archived_reason &&
+                    `${archiveReasonSummary[existing.archived_reason]} ${formatLongDate(existing.archived_on)}.`}
+                </p>
+                <Button
+                  variant="secondary"
+                  block
+                  onClick={() => unarchive.mutate(existing.id)}
+                  leading={<ArchiveRestore size={16} aria-hidden />}
+                >
+                  Volver a activarla
+                </Button>
+                <p className="text-xs text-subtle text-center -mt-1">
+                  Sus medicamentos y rutinas quedaron desactivados; tendrás que
+                  encenderlos de nuevo.
+                </p>
+              </>
+            ) : (
+              <Button
+                variant="secondary"
+                block
+                onClick={() => setArchiving(true)}
+                leading={<Heart size={16} aria-hidden />}
+              >
+                Ya no está conmigo
+              </Button>
+            )}
+
+            <Button
+              variant="danger"
+              block
+              onClick={() => setConfirmDelete(true)}
+              leading={<Trash2 size={16} aria-hidden />}
+            >
+              Eliminar mascota
+            </Button>
+            <p className="text-xs text-subtle text-center -mt-1">
+              Eliminar borra su historial completo. Si se despidió de ti, archívala.
+            </p>
+          </div>
+        )}
       </div>
+
+      <ArchivePetSheet
+        open={archiving}
+        petName={name.trim() || "Tu mascota"}
+        onClose={() => setArchiving(false)}
+        onConfirm={(reason, on) => {
+          archive.mutate({ id: editingId!, reason, on });
+          goBack();
+        }}
+      />
+
+      <ConfirmSheet
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          remove.mutate(editingId!);
+          goBack();
+        }}
+        title={`¿Eliminar a ${name.trim() || "esta mascota"}?`}
+        description="Se borrarán también sus citas, medicamentos, rutinas de ejercicio, cuidados, veterinarios y su historial de peso. No se puede deshacer."
+        confirmLabel="Eliminar para siempre"
+        requireText={name.trim() || undefined}
+      />
     </div>
   );
 }

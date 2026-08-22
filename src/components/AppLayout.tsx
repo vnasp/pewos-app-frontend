@@ -25,7 +25,7 @@ function AppLayout() {
   const { canWrite } = useAuth();
   const [addSheetOpen, setAddSheetOpen] = useState(false);
   // Única query que el marco necesita en todas las rutas: el guard depende de ella.
-  const { items: pets, isLoading: loadingPets } = usePets();
+  const { active: pets, isLoading: loadingPets } = usePets();
   const navigate = useNavigate();
   const location = useLocation();
   const matches = useMatches();
