@@ -7,6 +7,7 @@
 
 import type {
   AppointmentType,
+  ArchiveReason,
   CareType,
   ExerciseType,
   NotificationTime,
@@ -95,3 +96,23 @@ export const roleLabels: Record<TenantRole, string> = {
 
 /** 0=Domingo … 6=Sábado, igual que `Date.getDay()` y que `cares.days_of_week`. */
 export const weekDayLabels = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+
+/** Cómo se nombra el archivado al elegirlo. */
+export const archiveReasonLabels: Record<ArchiveReason, string> = {
+  deceased: "Falleció",
+  rehomed: "Se fue a otra casa",
+  other: "Otro motivo",
+};
+
+/**
+ * Cómo se cuenta después, ya en pasado y con fecha.
+ *
+ * Es la razón de ser del enum: "archivada el 12 de agosto" sirve para una mascota que se
+ * mudó y suena mal para una que murió.
+ */
+export const archiveReasonSummary: Record<ArchiveReason, string> = {
+  deceased: "Falleció el",
+  rehomed: "Se fue a otra casa el",
+  other: "Ya no está desde el",
+};

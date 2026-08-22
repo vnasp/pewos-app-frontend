@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 
 import { preloadOn } from "../../routes";
-import { Clock, Dumbbell, HeartPulse, LogOut, Pill, Users } from "lucide-react";
+import { Dumbbell, HeartPulse, LogOut, Pill, Users } from "lucide-react";
 
 import { roleLabels } from "../../constants/labels";
 import ConfirmSheet from "../../components/ui/ConfirmSheet";
 import { useAuth } from "../../context/AuthContext";
+import { fullName, initial } from "../../utils/name";
 
 function SettingsScreen() {
   const navigate = useNavigate();
@@ -37,13 +38,6 @@ function SettingsScreen() {
       fg: "text-rose-600",
     },
     {
-      label: "Horarios de comida",
-      icon: Clock,
-      path: "/ajustes/horarios",
-      color: "bg-amber-100",
-      fg: "text-amber-600",
-    },
-    {
       label: "Integrantes del grupo",
       icon: Users,
       path: "/ajustes/grupo",
@@ -55,21 +49,30 @@ function SettingsScreen() {
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-6">
       <div className="px-5 pt-6 pb-4 lg:max-w-3xl lg:mx-auto lg:w-full">
-        <div className="bg-indigo-50 rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-12 h-12 bg-indigo-200 rounded-full flex items-center justify-center">
+        {/* Era decorativa: mostraba el correo y no llevaba a ninguna parte. Ahora es la
+            entrada al perfil, que es lo que uno busca al tocarla. */}
+        <button
+          onClick={() => navigate("/ajustes/perfil")}
+          {...preloadOn("/ajustes/perfil")}
+          className="w-full bg-indigo-50 rounded-2xl p-4 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+        >
+          <div className="w-12 h-12 bg-indigo-200 rounded-full flex items-center justify-center shrink-0">
             <span className="text-indigo-700 font-bold text-lg uppercase">
-              {user?.email?.[0]}
+              {user ? initial(user) : ""}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-gray-900 font-semibold truncate">{user?.email}</p>
+            <p className="text-gray-900 font-semibold truncate">
+              {user ? fullName(user) : ""}
+            </p>
             <p className="text-gray-500 text-xs">
               {activeTenant
                 ? `${activeTenant.name} · ${roleLabels[role ?? "viewer"]}`
                 : "Sin grupo activo"}
             </p>
           </div>
-        </div>
+          <span className="text-gray-300 text-lg shrink-0">›</span>
+        </button>
       </div>
 
       {/* Selector de grupo: solo aparece si hay más de uno al que pertenecer. */}

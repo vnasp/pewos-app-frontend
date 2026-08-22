@@ -1,17 +1,36 @@
-import { Check, Copy, LogOut, Plus, Trash2, X } from "lucide-react";
+import { LogOut, Trash2, UserPlus } from "lucide-react";
 import { useState } from "react";
 
 import * as apiClient from "../../api";
 import { ApiError } from "../../api";
+import InvitationsSheet from "../../components/settings/InvitationsSheet";
+import ConfirmSheet from "../../components/ui/ConfirmSheet";
+import Spinner from "../../components/ui/Spinner";
+import {
+  countries,
+  countryForTimezone,
+  currentTimeIn,
+} from "../../constants/countries";
 import { roleLabels } from "../../constants/labels";
 import { useAuth } from "../../context/AuthContext";
 import { useTenantMembers } from "../../hooks/queries";
 import type { TenantRole } from "../../types";
+import { fullName, initial } from "../../utils/name";
 
 const ASSIGNABLE_ROLES: TenantRole[] = ["owner", "member", "viewer"];
 
+const FIELD =
+  "w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 text-sm outline-none focus:ring-2 focus:ring-indigo-400 disabled:bg-gray-50 disabled:text-gray-500";
+
+/**
+ * Solo lo que es del grupo.
+ *
+ * El perfil y "unirme a otro grupo" se fueron a Mi perfil: te acompañan a cualquier
+ * grupo, así que no eran de este. Las invitaciones pasaron a una hoja, que era el bloque
+ * más alto y el que menos se usa.
+ */
 function TenantMembersScreen() {
-  const { user, activeTenant, isOwner, redeemInvitation } = useAuth();
+  const { user, activeTenant, isOwner } = useAuth();
   const {
     members,
     invitations,
@@ -22,12 +41,17 @@ function TenantMembersScreen() {
     revokeInvitation,
   } = useTenantMembers();
 
-  const [newRole, setNewRole] = useState<TenantRole>("member");
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [joinCode, setJoinCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [groupName, setGroupName] = useState(activeTenant?.name ?? "");
-  const [savedName, setSavedName] = useState(false);
+  const [country, setCountry] = useState(activeTenant?.timezone ?? "");
+  const [saved, setSaved] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  // Las dos salidas del grupo: quitar a alguien y salirse uno mismo. Ninguna se deshace.
+  const [memberToRemove, setMemberToRemove] = useState<{
+    email: string;
+    user_id: string;
+  } | null>(null);
+  const [leaving, setLeaving] = useState(false);
 
   const run = async (action: () => Promise<unknown>) => {
     setError(null);
@@ -38,16 +62,10 @@ function TenantMembersScreen() {
     }
   };
 
-  const copyCode = async (code: string) => {
-    await navigator.clipboard.writeText(code);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(null), 2000);
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <Spinner />
       </div>
     );
   }
@@ -58,10 +76,11 @@ function TenantMembersScreen() {
         <p className="text-red-600 text-sm bg-red-50 rounded-xl px-3 py-2">{error}</p>
       )}
 
-      {/* Datos del grupo */}
       {activeTenant && (
         <section>
-          <h3 className="text-gray-500 text-xs font-semibold uppercase mb-2">Grupo</h3>
+          <h3 className="text-gray-500 text-xs font-semibold uppercase mb-2">
+            Datos del grupo
+          </h3>
           <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-3">
             <div>
               <label className="text-gray-700 font-semibold text-sm block mb-1">
@@ -71,43 +90,83 @@ function TenantMembersScreen() {
                 value={groupName}
                 onChange={(e) => {
                   setGroupName(e.target.value);
-                  setSavedName(false);
+                  setSaved(false);
                 }}
                 disabled={!isOwner}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 text-sm outline-none focus:ring-2 focus:ring-indigo-400 disabled:bg-gray-50 disabled:text-gray-500"
+                className={FIELD}
               />
             </div>
-            <div className="text-gray-500 text-sm">
-              Zona horaria:{" "}
-              <span className="font-semibold text-gray-700">{activeTenant.timezone}</span>
+            <div>
+              <label className="text-gray-700 font-semibold text-sm block mb-1">
+                País
+              </label>
+              <select
+                value={country}
+                onChange={(e) => {
+                  setCountry(e.target.value);
+                  setSaved(false);
+                }}
+                disabled={!isOwner}
+                className={FIELD}
+              >
+                {/* Una zona guardada que no está en la lista —Magallanes, un país que
+                    falte— tiene que poder seguir seleccionada, o abrir esta pantalla y
+                    guardar la cambiaría sin que nadie lo pidiera. */}
+                {!countryForTimezone(country) && (
+                  <option value={country}>Otra zona ({country})</option>
+                )}
+                {countries.map((option) => (
+                  <option key={option.timezone} value={option.timezone}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
               <p className="text-xs text-gray-400 mt-1">
-                Es la de la casa donde están las mascotas: define a qué hora vencen los
-                recordatorios para todo el grupo.
+                {currentTimeIn(country)
+                  ? `Ahí son las ${currentTimeIn(country)}. Es la hora con la que vencen los recordatorios de todo el grupo.`
+                  : "Define a qué hora vencen los recordatorios para todo el grupo."}
               </p>
             </div>
             {isOwner && (
               <button
                 onClick={() =>
                   run(async () => {
-                    await apiClient.tenants.update(activeTenant.id, { name: groupName });
-                    setSavedName(true);
+                    await apiClient.tenants.update(activeTenant.id, {
+                      name: groupName,
+                      timezone: country,
+                    });
+                    setSaved(true);
                   })
                 }
-                disabled={!groupName.trim() || groupName === activeTenant.name}
+                disabled={
+                  !groupName.trim() ||
+                  (groupName === activeTenant.name && country === activeTenant.timezone)
+                }
                 className="bg-indigo-600 text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50 active:scale-95 transition-transform"
               >
-                {savedName ? "Guardado" : "Guardar nombre"}
+                {saved ? "Guardado" : "Guardar cambios"}
               </button>
             )}
           </div>
         </section>
       )}
 
-      {/* Integrantes */}
       <section>
-        <h3 className="text-gray-500 text-xs font-semibold uppercase mb-2">
-          Integrantes ({members.length})
-        </h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-gray-500 text-xs font-semibold uppercase">
+            Integrantes ({members.length})
+          </h3>
+          {isOwner && (
+            <button
+              onClick={() => setInviting(true)}
+              className="flex items-center gap-1.5 bg-brand-soft text-brand font-bold px-3 py-1.5 rounded-full text-xs active:scale-95 transition-transform"
+            >
+              <UserPlus size={14} aria-hidden />
+              Invitar
+            </button>
+          )}
+        </div>
+
         <div className="flex flex-col gap-2">
           {members.map((member) => {
             const isMe = member.user_id === user?.id;
@@ -117,12 +176,12 @@ function TenantMembersScreen() {
                 className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3"
               >
                 <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center shrink-0 text-indigo-700 font-bold">
-                  {(member.display_name ?? member.email)[0].toUpperCase()}
+                  {initial(member)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-gray-900 font-semibold text-sm truncate">
-                    {member.display_name ?? member.email}
-                    {isMe && <span className="text-gray-400 font-normal"> (vos)</span>}
+                    {fullName(member)}
+                    {isMe && <span className="text-gray-400 font-normal"> (tú)</span>}
                   </p>
                   <p className="text-gray-500 text-xs truncate">{member.email}</p>
                 </div>
@@ -154,13 +213,11 @@ function TenantMembersScreen() {
 
                 {isOwner && !isMe && (
                   <button
-                    onClick={() =>
-                      window.confirm(`¿Quitar a ${member.email} del grupo?`) &&
-                      run(() => removeMember.mutateAsync(member.user_id))
-                    }
+                    onClick={() => setMemberToRemove(member)}
+                    aria-label={`Quitar a ${member.email}`}
                     className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center shrink-0 active:scale-90 transition-transform"
                   >
-                    <Trash2 size={14} className="text-red-600" />
+                    <Trash2 size={14} className="text-red-600" aria-hidden />
                   </button>
                 )}
               </div>
@@ -169,121 +226,49 @@ function TenantMembersScreen() {
         </div>
       </section>
 
-      {/* Invitaciones */}
-      {isOwner && (
-        <section>
-          <h3 className="text-gray-500 text-xs font-semibold uppercase mb-2">
-            Códigos de invitación
-          </h3>
-          <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-3">
-            <div className="flex gap-2">
-              <select
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value as TenantRole)}
-                className="flex-1 border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-indigo-400"
-              >
-                {ASSIGNABLE_ROLES.map((role) => (
-                  <option key={role} value={role}>
-                    {roleLabels[role]}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => run(() => createInvitation.mutateAsync(newRole))}
-                className="bg-indigo-600 text-white font-semibold px-4 rounded-xl text-sm flex items-center gap-1.5 active:scale-95 transition-transform"
-              >
-                <Plus size={16} />
-                Crear
-              </button>
-            </div>
-
-            {invitations.length === 0 ? (
-              <p className="text-gray-400 text-sm text-center py-2">
-                No hay códigos activos
-              </p>
-            ) : (
-              invitations.map((invitation) => (
-                <div
-                  key={invitation.id}
-                  className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2"
-                >
-                  <code className="flex-1 font-mono text-sm text-gray-900 truncate">
-                    {invitation.code}
-                  </code>
-                  <span className="text-gray-400 text-xs shrink-0">
-                    {roleLabels[invitation.role]} · {invitation.used_count}/
-                    {invitation.max_uses}
-                  </span>
-                  <button
-                    onClick={() => copyCode(invitation.code)}
-                    className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0 active:scale-90 transition-transform"
-                  >
-                    {copiedCode === invitation.code ? (
-                      <Check size={14} className="text-green-600" />
-                    ) : (
-                      <Copy size={14} className="text-indigo-600" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => run(() => revokeInvitation.mutateAsync(invitation.id))}
-                    className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center shrink-0 active:scale-90 transition-transform"
-                  >
-                    <X size={14} className="text-red-600" />
-                  </button>
-                </div>
-              ))
-            )}
-            <p className="text-gray-400 text-xs">
-              Compartí el código por donde quieras. Caduca a los 7 días y podés revocarlo
-              en cualquier momento.
-            </p>
-          </div>
-        </section>
-      )}
-
-      {/* Unirse a otro grupo */}
-      <section>
-        <h3 className="text-gray-500 text-xs font-semibold uppercase mb-2">
-          Unirme a otro grupo
-        </h3>
-        <div className="bg-white rounded-2xl p-4 shadow-sm flex gap-2">
-          <input
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value)}
-            placeholder="Pegá el código acá"
-            className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-          <button
-            onClick={() =>
-              run(async () => {
-                await redeemInvitation(joinCode.trim());
-                setJoinCode("");
-              })
-            }
-            disabled={!joinCode.trim()}
-            className="bg-indigo-600 text-white font-semibold px-4 rounded-xl text-sm disabled:opacity-50 active:scale-95 transition-transform"
-          >
-            Unirme
-          </button>
-        </div>
-      </section>
-
-      {/* Salir del grupo */}
       {activeTenant && (
         <button
-          onClick={() =>
-            window.confirm(`¿Salir de "${activeTenant.name}"?`) &&
-            run(async () => {
-              await apiClient.tenants.leave(activeTenant.id);
-              window.location.reload();
-            })
-          }
+          onClick={() => setLeaving(true)}
           className="flex items-center justify-center gap-2 border-2 border-red-500 text-red-600 font-semibold py-3 rounded-xl text-sm active:bg-red-50 transition-colors"
         >
-          <LogOut size={16} />
+          <LogOut size={16} aria-hidden />
           Salir de este grupo
         </button>
       )}
+
+      <InvitationsSheet
+        open={inviting}
+        onClose={() => setInviting(false)}
+        invitations={invitations}
+        onCreate={(role) => run(() => createInvitation.mutateAsync(role))}
+        onRevoke={(id) => run(() => revokeInvitation.mutateAsync(id))}
+      />
+
+      <ConfirmSheet
+        open={memberToRemove !== null}
+        onClose={() => setMemberToRemove(null)}
+        onConfirm={() =>
+          memberToRemove && run(() => removeMember.mutateAsync(memberToRemove.user_id))
+        }
+        title="¿Quitar del grupo?"
+        description={`${memberToRemove?.email ?? "Esta persona"} dejará de ver las mascotas y sus recordatorios. Los datos del grupo no se pierden.`}
+        confirmLabel="Quitar"
+      />
+
+      <ConfirmSheet
+        open={leaving}
+        onClose={() => setLeaving(false)}
+        onConfirm={() =>
+          activeTenant &&
+          run(async () => {
+            await apiClient.tenants.leave(activeTenant.id);
+            window.location.reload();
+          })
+        }
+        title={`¿Salir de ${activeTenant?.name ?? "este grupo"}?`}
+        description="Perderás el acceso a sus mascotas y a todo su historial. Alguien del grupo tendrá que volver a invitarte."
+        confirmLabel="Salir del grupo"
+      />
     </div>
   );
 }
