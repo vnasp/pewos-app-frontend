@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router";
 
 import * as apiClient from "../../api";
 import { usePets } from "../../hooks/queries";
+import type { Pet } from "../../types";
 import { today } from "../../utils/date";
 
 function AddEditPetScreen() {
@@ -13,7 +14,11 @@ function AddEditPetScreen() {
   // compartido no tiene historial atrás y retroceder lo sacaría de la app.
   const goBack = () => navigate("/mascotas");
   const { create, update, byId } = usePets();
-  const isEditing = !!petId;
+  // Si la mascota se creó pero la foto falló, seguimos en el formulario con su id a
+  // mano: sin esto, volver a guardar crearía una segunda mascota idéntica.
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const editingId = petId ?? savedId;
+  const isEditing = !!editingId;
   const existing = byId(petId);
 
   const [name, setName] = useState(existing?.name ?? "");
@@ -51,15 +56,31 @@ function AddEditPetScreen() {
       targetPetId,
       pendingFile.type,
     );
+    // `fetch` solo rechaza por red o por CORS; un 403 de S3 llega como respuesta normal.
+    // Distinguirlos importa porque el CORS del bucket es lo que más se olvida configurar.
     const response = await fetch(upload_url, {
       method: "PUT",
       body: pendingFile,
       headers: { "Content-Type": pendingFile.type },
+    }).catch(() => {
+      throw new Error("no se pudo contactar el bucket (revisa su configuración de CORS)");
     });
-    if (!response.ok) throw new Error("No se pudo subir la foto");
+    if (!response.ok) throw new Error(`S3 respondió ${response.status}`);
     return photo_key;
   };
 
+  const reason = (err: unknown, fallback: string) =>
+    err instanceof Error ? err.message : fallback;
+
+  /**
+   * La mascota y su foto se guardan en dos pasos que fallan por separado.
+   *
+   * Son cuatro peticiones sin transacción —crear, pedir la URL, subir, guardar la key— y
+   * la foto necesita el id de la mascota para armar su ruta, así que no hay forma de
+   * hacerla primero. Tratar todo como una sola operación era el bug: cualquier tropiezo
+   * en la foto mostraba "no se pudo guardar" con la mascota ya creada, y reintentar
+   * dejaba dos.
+   */
   const handleSave = async () => {
     if (!name.trim()) {
       setError("Ingresa el nombre de la mascota");
@@ -67,27 +88,42 @@ function AddEditPetScreen() {
     }
     setError(null);
     setSaving(true);
+
+    const data = {
+      name: name.trim(),
+      breed: breed.trim() || null,
+      birth_date: birthDate || null,
+      gender,
+      neutered,
+    };
+
     try {
-      const data = {
-        name: name.trim(),
-        breed: breed.trim() || null,
-        birth_date: birthDate || null,
-        gender,
-        neutered,
-      };
-
-      const saved =
-        isEditing && petId
-          ? await update.mutateAsync({ id: petId, data })
+      let saved: Pet;
+      try {
+        saved = editingId
+          ? await update.mutateAsync({ id: editingId, data })
           : await create.mutateAsync(data);
-
-      const photoKey = await uploadPhoto(saved.id);
-      if (photoKey) {
-        await update.mutateAsync({ id: saved.id, data: { ...data, photo_key: photoKey } });
+      } catch (err) {
+        setError(reason(err, "No se pudo guardar"));
+        return;
       }
+
+      try {
+        const photoKey = await uploadPhoto(saved.id);
+        if (photoKey) {
+          await update.mutateAsync({ id: saved.id, data: { ...data, photo_key: photoKey } });
+        }
+      } catch (err) {
+        // A partir de acá el formulario edita la mascota que ya existe, así que volver a
+        // guardar reintenta la foto en vez de duplicarla.
+        setSavedId(saved.id);
+        setError(
+          `Guardamos a ${data.name}, pero la foto no se subió: ${reason(err, "error desconocido")}. Puedes reintentar o volver sin ella.`,
+        );
+        return;
+      }
+
       goBack();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo guardar");
     } finally {
       setSaving(false);
     }
