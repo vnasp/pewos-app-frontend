@@ -1,11 +1,10 @@
 # Pewos — Agenda para Mascotas
 
-Aplicación web progresiva (PWA) para gestionar la agenda de tus mascotas: medicaciones,
-ejercicios, cuidados post-operatorios, horarios de comida, citas veterinarias y calendario,
-con notificaciones push.
+Aplicación web responsive para gestionar la agenda de tus mascotas: medicaciones,
+ejercicios, cuidados post-operatorios, horarios de comida, citas veterinarias y calendario.
 
 Es el frontend de [`pewos-api`](../pewos-api) (FastAPI + PostgreSQL), que se encarga de la
-autenticación, los datos y el envío de notificaciones.
+autenticación y los datos.
 
 > Proyecto personal en desarrollo. Necesita `pewos-api` corriendo para funcionar.
 
@@ -37,15 +36,12 @@ donde viva quien mira la app.
 - Horarios de comida configurables y reordenables, por grupo
 - Directorio de veterinarios
 - Marcado de recordatorios con atribución ("lo marcó Ana")
-- Notificaciones push (Web Push desde la API + Service Worker local)
-- Instalable como PWA
 
 ## Tecnologías
 
 - React 19 + TypeScript
 - TanStack Query v5 (estado de servidor) + un `AuthContext` delgado
 - Vite 7 + Tailwind CSS 4
-- Vite PWA Plugin + Workbox
 - Lucide React (iconos)
 
 No hay librería de estado global: todo lo que viene del servidor vive en la caché de TanStack
@@ -69,7 +65,7 @@ cp .env.example .env
 
 `VITE_API_URL=/api` es lo normal: en desarrollo el dev server de Vite hace proxy de `/api` a
 `http://localhost:8000`, y en producción CloudFront enruta `/api/*` al origen EC2. En ambos
-casos la PWA y la API comparten dominio, así que las cookies de sesión son same-origin y no
+casos el frontend y la API comparten dominio, así que las cookies de sesión son same-origin y no
 hay CORS.
 
 3. Instalar dependencias y arrancar:
@@ -90,7 +86,7 @@ npm run lint
 
 ```
 pewos-react-pwa/
-├── public/assets/           # Iconos PWA y splash
+├── public/assets/
 ├── src/
 │   ├── api/
 │   │   ├── client.ts        # fetch con cookies + refresh single-flight ante 401
@@ -106,19 +102,14 @@ pewos-react-pwa/
 │   ├── context/
 │   │   └── AuthContext.tsx  # sesión, grupo activo, rol, canWrite
 │   ├── hooks/
-│   │   ├── queries.ts       # useQuery/useMutation por recurso
-│   │   ├── useNotificationScheduler.ts
-│   │   ├── usePushSubscription.ts
-│   │   └── usePwaUpdate.ts
-│   ├── screens/
+│   │   └── queries.ts       # useQuery/useMutation por recurso
+│   ├── pages/
 │   ├── types/index.ts       # espejo de los schemas de pewos-api
 │   ├── utils/
 │   │   ├── date.ts          # fechas ISO sin el corrimiento de UTC
-│   │   ├── notifications.ts
 │   │   └── schedule.ts      # reparto de horarios en el día
 │   ├── App.tsx
-│   ├── main.tsx
-│   └── sw.ts                # Service Worker (injectManifest)
+│   └── main.tsx
 ├── vite.config.ts
 └── package.json
 ```

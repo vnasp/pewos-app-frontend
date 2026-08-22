@@ -15,10 +15,10 @@ interface ConfirmSheetProps {
 /**
  * Confirmación dentro de la app, en vez de `window.confirm`.
  *
- * El diálogo nativo aparece como una alerta del sistema operativo cuando la PWA está
- * instalada, con el nombre del navegador y sin nada de la identidad de Pewos.
+ * El diálogo nativo aparece con el nombre del navegador y sin nada de la identidad de
+ * Pewos, y en móvil corta la interacción con una alerta del sistema.
  */
-export default function ConfirmSheet({
+function ConfirmSheet({
   open,
   onClose,
   onConfirm,
@@ -63,3 +63,5 @@ export default function ConfirmSheet({
     </Sheet>
   );
 }
+
+export default ConfirmSheet;

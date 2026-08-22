@@ -100,8 +100,3 @@ export const completions = {
     completed_date: string;
   }) => api.del<void>("/completions", payload),
 };
-
-export const push = {
-  subscribe: (payload: { endpoint: string; p256dh: string; auth: string }) =>
-    api.put<void>("/push-subscriptions", payload),
-};

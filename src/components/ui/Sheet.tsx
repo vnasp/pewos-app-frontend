@@ -12,10 +12,10 @@ interface SheetProps {
 /**
  * Hoja inferior con backdrop. Cierra con Escape o tocando fuera.
  *
- * Existe para dejar de usar `window.confirm`, que en la PWA instalada se ve como una alerta
- * del sistema operativo y rompe la ilusión de app.
+ * Existe para dejar de usar `window.confirm`, que se ve como una alerta del navegador y
+ * rompe la continuidad visual de la app.
  */
-export default function Sheet({ open, onClose, title, children }: SheetProps) {
+function Sheet({ open, onClose, title, children }: SheetProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -49,3 +49,5 @@ export default function Sheet({ open, onClose, title, children }: SheetProps) {
     document.body,
   );
 }
+
+export default Sheet;
