@@ -282,6 +282,10 @@ el FAB tapa la última tarjeta.
 - Regenerar ícono, `apple-touch-icon`, `favicon`, splash y los `pwa-*.png`. El `theme_color` y
   el `background_color` **sí se actualizaron en la fase 1** (no dependen del arte y dejarlos en
   `#4f39f6` desentonaba con el degradado nuevo); lo que queda es el arte en sí.
+- **Idea sin agendar:** un "primeros pasos" **posterior al registro**, que intercale los
+  beneficios de la app con acciones reales (agregar mascota → horarios de comida → invitar al
+  grupo). Es otra pieza distinta de la portada pre-login que ya existe: aquella convence a quien
+  no ha entrado, esta resuelve la app vacía de quien acaba de registrarse.
 - Migrar los 9 `window.confirm` a `Sheet` (fases 2 y 3).
 - Borrar `appointmentTypeColors`, `exerciseTypeColors` y `careTypeColors` de `labels.ts` al
   cerrar la fase 3, cuando ya no los importe nadie.
