@@ -21,14 +21,36 @@ const queryClient = new QueryClient({
   },
 });
 
+/**
+ * El onboarding se muestra una sola vez por navegador.
+ *
+ * Antes arrancaba siempre en `true` y no se guardaba nada, así que aparecía en cada
+ * apertura de la app. El acceso va en try/catch porque en modo privado o con las cookies
+ * bloqueadas `localStorage` lanza en vez de devolver null.
+ */
+const ONBOARDING_KEY = "pewos.onboarding.seen";
+
+function hasSeenOnboarding(): boolean {
+  try {
+    return localStorage.getItem(ONBOARDING_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 function AppContent() {
   const { user, loading } = useAuth();
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [seenOnboarding, setSeenOnboarding] = useState(hasSeenOnboarding);
   usePwaUpdate();
 
-  if (showOnboarding) {
-    return <OnboardingScreen onContinue={() => setShowOnboarding(false)} />;
-  }
+  const dismissOnboarding = () => {
+    try {
+      localStorage.setItem(ONBOARDING_KEY, "1");
+    } catch {
+      // Sin persistencia se volverá a mostrar; no es motivo para romper el flujo.
+    }
+    setSeenOnboarding(true);
+  };
 
   if (loading) {
     return (
@@ -38,11 +60,17 @@ function AppContent() {
     );
   }
 
-  if (!user) {
-    return <LoginScreen />;
+  if (user) {
+    return <AppLayout />;
   }
 
-  return <AppLayout />;
+  // El botón del onboarding dice "Iniciar sesión", así que solo tiene sentido
+  // mostrarlo cuando efectivamente no hay sesión.
+  if (!seenOnboarding) {
+    return <OnboardingScreen onContinue={dismissOnboarding} />;
+  }
+
+  return <LoginScreen />;
 }
 
 export default function App() {

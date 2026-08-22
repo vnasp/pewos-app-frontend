@@ -33,7 +33,7 @@ compartidos: demasiado para un solo plan.
 | **1 — este spec** | Tokens, 8 primitivos, shell (`AppLayout`/`Header`/`TabBar`/`Fab`), pantalla Hoy |
 | 2 | 7 pantallas de listado: Mascotas, Agenda, Medicamentos, Ejercicios, Cuidados, Veterinarios, Mi grupo |
 | 3 | 7 formularios: los 6 `AddEdit*` y Horarios de comida |
-| 4 | Login, Onboarding, InstallBanner |
+| 4 | Login, Onboarding, InstallBanner — **Login y Onboarding adelantados y hechos**; queda `InstallBanner` |
 | 5 | Desktop y tablet |
 
 **La fase 1 deja la app entera funcionando.** Las pantallas de fases posteriores siguen usando

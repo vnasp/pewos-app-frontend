@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+
+import PasswordStrengthIndicator from "../components/PasswordStrengthIndicator";
 import { useAuth } from "../context/AuthContext";
-import PasswordStrengthIndicator, {
-  isPasswordStrong,
-} from "../components/PasswordStrengthIndicator";
+import { isPasswordStrong } from "../utils/password";
 
 type Mode = "login" | "register";
+
+const inputClass =
+  "w-full bg-canvas border border-line rounded-tile px-4 py-3.5 text-ink text-base outline-none transition-colors focus:border-brand focus:bg-white focus:ring-3 focus:ring-brand/15 placeholder:text-subtle";
 
 export default function LoginScreen() {
   const [mode, setMode] = useState<Mode>("login");
@@ -55,127 +58,160 @@ export default function LoginScreen() {
   const isLogin = mode === "login";
 
   return (
-    <div className="min-h-svh flex flex-col bg-indigo-600">
-      <div className="flex-1 flex flex-col justify-center px-6 py-12">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-10">
+    <div className="min-h-svh flex flex-col bg-white">
+      <div className="bg-brand-gradient pt-[env(safe-area-inset-top)] px-6 pb-14 text-center">
+        <div className="pt-10 lg:max-w-md lg:mx-auto">
           <img
             src="/assets/icon.webp"
-            alt="Pewos"
-            className="w-16 h-auto mb-4"
+            alt=""
+            className="w-14 h-auto mx-auto mb-3"
             fetchPriority="high"
           />
-          <h1 className="text-white text-3xl font-bold tracking-wide">Pewos</h1>
-          <p className="text-white/70 text-sm text-center mt-1">
-            Gestiona la salud de tus mascotas
+          <h1 className="text-white text-3xl font-extrabold tracking-tight">
+            Pewos
+          </h1>
+          <p className="text-white/85 text-sm font-semibold mt-1">
+            La agenda de tus mascotas
           </p>
         </div>
+      </div>
 
-        {/* Tabs */}
-        <div className="flex bg-indigo-700/60 rounded-2xl p-1 mb-6">
-          <button
-            type="button"
-            onClick={() => switchMode("login")}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-              isLogin ? "bg-white text-indigo-700" : "text-white/70"
-            }`}
+      <div className="flex-1 bg-white rounded-t-sheet -mt-7 relative z-10 px-6 pt-6 pb-[calc(2rem+env(safe-area-inset-bottom))]">
+        <div className="lg:max-w-md lg:mx-auto">
+          <div
+            role="tablist"
+            className="flex bg-canvas rounded-full p-1 mb-6 border border-line"
           >
-            Iniciar sesión
-          </button>
-          <button
-            type="button"
-            onClick={() => switchMode("register")}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-              !isLogin ? "bg-white text-indigo-700" : "text-white/70"
-            }`}
-          >
-            Registrarse
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-white/90 text-sm font-semibold block mb-1.5">
-              Correo electrónico
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
-              autoComplete="email"
-              className="w-full bg-white px-4 py-3.5 rounded-xl text-gray-700 text-base outline-none focus:ring-2 focus:ring-orange-400"
-            />
-          </div>
-
-          <div>
-            <label className="text-white/90 text-sm font-semibold block mb-1.5">
-              Contraseña
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete={isLogin ? "current-password" : "new-password"}
-                className="w-full bg-white px-4 py-3.5 pr-12 rounded-xl text-gray-700 text-base outline-none focus:ring-2 focus:ring-orange-400"
-              />
+            {(["login", "register"] as const).map((m) => (
               <button
+                key={m}
                 type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 p-1"
+                role="tab"
+                aria-selected={mode === m}
+                onClick={() => switchMode(m)}
+                className={`flex-1 py-2.5 rounded-full text-sm font-extrabold transition-colors ${
+                  mode === m
+                    ? "bg-brand-gradient text-white"
+                    : "text-muted active:text-ink"
+                }`}
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {m === "login" ? "Iniciar sesión" : "Registrarse"}
               </button>
-            </div>
-            {!isLogin && <PasswordStrengthIndicator password={password} />}
+            ))}
           </div>
 
-          {!isLogin && (
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-white/90 text-sm font-semibold block mb-1.5">
-                Confirmar contraseña
+              <label
+                htmlFor="email"
+                className="text-muted text-xs font-extrabold block mb-1.5"
+              >
+                Correo electrónico
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tu@email.com"
+                autoComplete="email"
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="password"
+                className="text-muted text-xs font-extrabold block mb-1.5"
+              >
+                Contraseña
               </label>
               <div className="relative">
                 <input
-                  type={showConfirm ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  autoComplete="new-password"
-                  className="w-full bg-white px-4 py-3.5 pr-12 rounded-xl text-gray-700 text-base outline-none focus:ring-2 focus:ring-orange-400"
+                  autoComplete={isLogin ? "current-password" : "new-password"}
+                  className={`${inputClass} pe-12`}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowConfirm((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 p-1"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={
+                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                  }
+                  className="absolute end-3 top-1/2 -translate-y-1/2 text-subtle p-1"
                 >
-                  {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword ? (
+                    <EyeOff size={20} aria-hidden />
+                  ) : (
+                    <Eye size={20} aria-hidden />
+                  )}
                 </button>
               </div>
+              {!isLogin && <PasswordStrengthIndicator password={password} />}
             </div>
-          )}
 
-          {error && (
-            <p className="text-white bg-red-500/40 rounded-xl px-4 py-3 text-sm">
-              {error}
-            </p>
-          )}
+            {!isLogin && (
+              <div>
+                <label
+                  htmlFor="confirm"
+                  className="text-muted text-xs font-extrabold block mb-1.5"
+                >
+                  Confirmar contraseña
+                </label>
+                <div className="relative">
+                  <input
+                    id="confirm"
+                    type={showConfirm ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    className={`${inputClass} pe-12`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    aria-label={
+                      showConfirm ? "Ocultar contraseña" : "Mostrar contraseña"
+                    }
+                    className="absolute end-3 top-1/2 -translate-y-1/2 text-subtle p-1"
+                  >
+                    {showConfirm ? (
+                      <EyeOff size={20} aria-hidden />
+                    ) : (
+                      <Eye size={20} aria-hidden />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-orange-500 text-white font-bold py-4 rounded-xl text-base disabled:opacity-60 active:scale-95 transition-transform mt-2"
-          >
-            {loading
-              ? "Cargando..."
-              : isLogin
-                ? "Iniciar sesión"
-                : "Crear cuenta"}
-          </button>
-        </form>
+            {error && (
+              <p
+                role="alert"
+                className="bg-danger-soft text-danger rounded-tile px-4 py-3 text-sm font-semibold"
+              >
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-brand-gradient text-white font-extrabold py-4 rounded-full text-base disabled:opacity-60 active:scale-95 transition-transform mt-2 shadow-fab"
+            >
+              {loading
+                ? "Cargando…"
+                : isLogin
+                  ? "Iniciar sesión"
+                  : "Crear cuenta"}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

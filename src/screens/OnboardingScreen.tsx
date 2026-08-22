@@ -5,7 +5,7 @@ interface Props {
 }
 
 export default function OnboardingScreen({ onContinue }: Props) {
-  // Prevent text selection on the screen
+  // La foto ocupa casi toda la pantalla y arrastrar sobre ella selecciona texto.
   useEffect(() => {
     const prevent = (e: Event) => e.preventDefault();
     document.addEventListener("selectstart", prevent);
@@ -13,26 +13,16 @@ export default function OnboardingScreen({ onContinue }: Props) {
   }, []);
 
   return (
-    <div className="relative w-full h-svh overflow-hidden flex flex-col">
-      {/* Gradient background */}
-      <div className="absolute inset-0 bg-linear-to-b from-indigo-800 to-indigo-600" />
-
-      {/* Floating circle top-right */}
-      <div className="absolute rounded-full bg-indigo-600 opacity-40 animate-float-up w-75 h-75 -top-37.5 -right-25" />
-
-      {/* Floating circle bottom-left */}
-      <div className="absolute rounded-full bg-indigo-700 opacity-40 animate-float-down w-62.5 h-62.5 -bottom-25 -left-12.5" />
-
-      {/* Pulsing ring 1 */}
-      <div className="absolute rounded-full animate-pulse-ring w-100 h-100 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-500/25 z-6" />
-
-      {/* Pulsing ring 2 */}
+    <div className="relative w-full h-svh overflow-hidden flex flex-col bg-brand-gradient">
+      {/* Formas de fondo. Van detrás de la foto, que es transparente salvo el cachorro. */}
+      <div className="absolute rounded-full bg-white/10 animate-float-up w-75 h-75 -top-37.5 -right-25" />
+      <div className="absolute rounded-full bg-white/8 animate-float-down w-62.5 h-62.5 top-1/3 -left-20" />
+      <div className="absolute rounded-full animate-pulse-ring w-100 h-100 top-1/2 left-1/2 bg-white/10" />
       <div
-        className="absolute rounded-full animate-pulse-ring-slow w-100 h-100 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-500/20 z-6"
+        className="absolute rounded-full animate-pulse-ring-slow w-100 h-100 top-1/2 left-1/2 bg-white/8"
         style={{ animationDelay: "1.5s" }}
       />
 
-      {/* Background image */}
       <img
         src="/assets/onboarding.webp"
         alt=""
@@ -41,25 +31,24 @@ export default function OnboardingScreen({ onContinue }: Props) {
         draggable={false}
       />
 
-      {/* Content */}
-      <div className="relative flex flex-col flex-1 px-5 pt-5 z-10">
-        {/* Title */}
-        <div className="flex-1 flex flex-col justify-start pt-28 text-center">
-          <h1 className="text-4xl font-medium text-white leading-tight">
-            Todo la agenda de <br />
-            <span className="font-black text-white">tu mascota</span>
+      <div className="relative flex flex-col flex-1 px-5 pt-[env(safe-area-inset-top)] z-10">
+        <div className="flex-1 pt-28 text-center">
+          <h1 className="text-4xl font-medium text-white leading-tight tracking-tight">
+            Toda la agenda de
+            <br />
+            <span className="font-extrabold">tu mascota</span>
             <br />
             en un solo lugar
           </h1>
         </div>
 
-        {/* Button */}
-        <div className="pb-10 px-5">
+        <div className="px-5 pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
           <button
+            type="button"
             onClick={onContinue}
-            className="w-full lg:max-w-md lg:mx-auto h-16 rounded-full bg-[#f97316] text-white text-base font-semibold active:opacity-80 transition-opacity lg:block"
+            className="w-full lg:max-w-md lg:mx-auto lg:block h-14 rounded-full bg-white text-brand-dark text-base font-extrabold shadow-float active:scale-95 transition-transform"
           >
-            Comenzar
+            Iniciar sesión
           </button>
         </div>
       </div>
