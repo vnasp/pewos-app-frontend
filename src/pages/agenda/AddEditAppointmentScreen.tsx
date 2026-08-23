@@ -1,14 +1,24 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft } from "lucide-react";
-import { today } from "../../utils/date";
-import { appointmentTypeLabels, recurrenceLabels } from "../../constants/labels";
+
+import PetPicker from "../../components/pets/PetPicker";
+import Button from "../../components/ui/Button";
+import ErrorText from "../../components/ui/ErrorText";
+import { Field, FieldGroup } from "../../components/ui/Field";
+import FormScreen from "../../components/ui/FormScreen";
+import { Input, Select, TextArea } from "../../components/ui/Input";
+import {
+  appointmentTypeLabels,
+  notificationOptions,
+  recurrenceLabels,
+} from "../../constants/labels";
 import { useAppointments, usePetOptions } from "../../hooks/queries";
 import type {
   AppointmentType,
-  RecurrencePattern,
   NotificationTime,
+  RecurrencePattern,
 } from "../../types";
+import { today } from "../../utils/date";
 
 const appointmentTypes: AppointmentType[] = [
   "control",
@@ -19,20 +29,13 @@ const appointmentTypes: AppointmentType[] = [
   "desparasitacion",
   "otro",
 ];
+
 const recurrenceOptions: RecurrencePattern[] = [
   "none",
   "daily",
   "weekly",
   "biweekly",
   "monthly",
-];
-const notificationOptions: { value: NotificationTime; label: string }[] = [
-  { value: "none", label: "Sin notificación" },
-  { value: "15min", label: "15 minutos antes" },
-  { value: "30min", label: "30 minutos antes" },
-  { value: "1h", label: "1 hora antes" },
-  { value: "2h", label: "2 horas antes" },
-  { value: "1day", label: "1 día antes" },
 ];
 
 function AddEditAppointmentScreen() {
@@ -48,7 +51,7 @@ function AddEditAppointmentScreen() {
     : undefined;
   const pets = usePetOptions(existing?.pet_id);
 
-  const [selectedPetId, setSelectedDogId] = useState(
+  const [selectedPetId, setSelectedPetId] = useState(
     existing?.pet_id ?? pets[0]?.id ?? "",
   );
   const [date, setDate] = useState(existing?.date ?? today());
@@ -115,176 +118,94 @@ function AddEditAppointmentScreen() {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto pb-6">
-      <div className="px-5 pt-5 pb-3 flex items-center gap-2 lg:max-w-3xl lg:mx-auto lg:w-full">
-        <button
-          onClick={goBack}
-          className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform shrink-0"
-        >
-          <ArrowLeft size={18} className="text-gray-800" />
-        </button>
-        <h2 className="text-gray-900 font-bold text-lg">
-          {isEditing ? "Editar cita" : "Nueva cita"}
-        </h2>
-      </div>
+    <FormScreen title={isEditing ? "Editar cita" : "Nueva cita"} onBack={goBack}>
+      <PetPicker pets={pets} value={selectedPetId} onChange={setSelectedPetId} />
 
-      <div className="px-5 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto lg:w-full">
-        {/* Mascota */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Mascota
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {pets.map((pet) => (
-              <button
-                key={pet.id}
-                onClick={() => setSelectedDogId(pet.id)}
-                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${selectedPetId === pet.id ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
-              >
-                {pet.name}
-              </button>
-            ))}
-          </div>
+      <FieldGroup label="Tipo de cita">
+        <div className="grid grid-cols-2 gap-2">
+          {appointmentTypes.map((t) => (
+            <Button
+              key={t}
+              size="sm"
+              variant="secondary"
+              selected={type === t}
+              onClick={() => setType(t)}
+              block
+            >
+              {appointmentTypeLabels[t]}
+            </Button>
+          ))}
         </div>
-
-        {/* Tipo de cita */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Tipo de cita
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {appointmentTypes.map((t) => (
-              <button
-                key={t}
-                onClick={() => setType(t)}
-                className={`py-2.5 rounded-xl font-semibold text-sm transition-colors text-center ${type === t ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
-              >
-                {appointmentTypeLabels[t]}
-              </button>
-            ))}
-          </div>
-          {type === "otro" && (
-            <input
-              value={customTypeDescription}
-              onChange={(e) => setCustomTypeDescription(e.target.value)}
-              placeholder="Describe el tipo de cita"
-              className="mt-2 w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          )}
-        </div>
-
-        {/* Fecha y hora */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-gray-700 font-semibold text-sm block mb-1">
-              Fecha
-            </label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-xl px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          </div>
-          <div>
-            <label className="text-gray-700 font-semibold text-sm block mb-1">
-              Hora
-            </label>
-            <input
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="w-full border border-gray-300 rounded-xl px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          </div>
-        </div>
-
-        {/* Recurrencia */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Repetición
-          </label>
-          <select
-            value={recurrencePattern}
-            onChange={(e) =>
-              setRecurrencePattern(e.target.value as RecurrencePattern)
-            }
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-400"
-          >
-            {recurrenceOptions.map((r) => (
-              <option key={r} value={r}>
-                {recurrenceLabels[r]}
-              </option>
-            ))}
-          </select>
-          {recurrencePattern !== "none" && (
-            <div className="mt-2">
-              <label className="text-gray-600 text-xs font-semibold block mb-1">
-                Fecha fin de repetición
-              </label>
-              <input
-                type="date"
-                value={recurrenceEndDate}
-                onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Notificación */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Notificación
-          </label>
-          <select
-            value={notificationTime}
-            onChange={(e) =>
-              setNotificationTime(e.target.value as NotificationTime)
-            }
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-400"
-          >
-            {notificationOptions.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Notas */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-1">
-            Notas (opcional)
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            placeholder="Instrucciones, preparaciones..."
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+        {type === "otro" && (
+          <Input
+            value={customTypeDescription}
+            onChange={(e) => setCustomTypeDescription(e.target.value)}
+            placeholder="Describe el tipo de cita"
+            className="mt-2"
           />
-        </div>
-
-        {error && (
-          <p className="text-red-600 text-sm bg-red-50 rounded-xl px-3 py-2">
-            {error}
-          </p>
         )}
+      </FieldGroup>
 
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl text-base disabled:opacity-60 active:scale-95 transition-transform"
-        >
-          {saving
-            ? "Guardando..."
-            : isEditing
-              ? "Guardar cambios"
-              : "Agregar cita"}
-        </button>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Fecha">
+          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </Field>
+        <Field label="Hora">
+          <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        </Field>
       </div>
-    </div>
+
+      <Field label="Repetición">
+        <Select
+          value={recurrencePattern}
+          onChange={(e) => setRecurrencePattern(e.target.value as RecurrencePattern)}
+        >
+          {recurrenceOptions.map((r) => (
+            <option key={r} value={r}>
+              {recurrenceLabels[r]}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      {recurrencePattern !== "none" && (
+        <Field label="Fecha fin de repetición">
+          <Input
+            type="date"
+            value={recurrenceEndDate}
+            onChange={(e) => setRecurrenceEndDate(e.target.value)}
+          />
+        </Field>
+      )}
+
+      <Field label="Notificación">
+        <Select
+          value={notificationTime}
+          onChange={(e) => setNotificationTime(e.target.value as NotificationTime)}
+        >
+          {notificationOptions.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      <Field label="Notas (opcional)">
+        <TextArea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={3}
+          placeholder="Instrucciones, preparaciones..."
+        />
+      </Field>
+
+      <ErrorText>{error}</ErrorText>
+
+      <Button block onClick={handleSave} disabled={saving}>
+        {saving ? "Guardando..." : isEditing ? "Guardar cambios" : "Agregar cita"}
+      </Button>
+    </FormScreen>
   );
 }
 

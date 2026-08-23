@@ -1,11 +1,17 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft } from "lucide-react";
-import { calculateScheduledTimes } from "../../utils/schedule";
-import { formatLocalDate, parseLocalDate, shortTime, today } from "../../utils/date";
-import type { ExerciseType, NotificationTime } from "../../types";
-import { exerciseTypeColors, exerciseTypeLabels } from "../../constants/labels";
+
+import PetPicker from "../../components/pets/PetPicker";
+import Button from "../../components/ui/Button";
+import ErrorText from "../../components/ui/ErrorText";
+import { Field, FieldGroup } from "../../components/ui/Field";
+import FormScreen from "../../components/ui/FormScreen";
+import { Input, Select, TextArea } from "../../components/ui/Input";
+import { exerciseTypeLabels, notificationOptions } from "../../constants/labels";
 import { useExercises, usePetOptions } from "../../hooks/queries";
+import type { ExerciseType, NotificationTime } from "../../types";
+import { formatLocalDate, parseLocalDate, shortTime, today } from "../../utils/date";
+import { calculateScheduledTimes } from "../../utils/schedule";
 
 const exerciseTypes: ExerciseType[] = [
   "caminata",
@@ -14,15 +20,6 @@ const exerciseTypes: ExerciseType[] = [
   "slalom",
   "entrenamiento",
   "otro",
-];
-
-const notificationOptions: { value: NotificationTime; label: string }[] = [
-  { value: "none", label: "Sin notificación" },
-  { value: "15min", label: "15 min antes" },
-  { value: "30min", label: "30 min antes" },
-  { value: "1h", label: "1 hora antes" },
-  { value: "2h", label: "2 horas antes" },
-  { value: "1day", label: "1 día antes" },
 ];
 
 function AddEditExerciseScreen() {
@@ -36,7 +33,7 @@ function AddEditExerciseScreen() {
   const existing = exerciseId ? byId(exerciseId) : undefined;
   const pets = usePetOptions(existing?.pet_id);
 
-  const [selectedPetId, setSelectedDogId] = useState(
+  const [selectedPetId, setSelectedPetId] = useState(
     existing?.pet_id ?? pets[0]?.id ?? "",
   );
   const [type, setType] = useState<ExerciseType>(existing?.type ?? "caminata");
@@ -139,242 +136,162 @@ function AddEditExerciseScreen() {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto pb-6">
-      <div className="px-5 pt-5 pb-3 flex items-center gap-2 lg:max-w-3xl lg:mx-auto lg:w-full">
-        <button
-          onClick={goBack}
-          className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform shrink-0"
-        >
-          <ArrowLeft size={18} className="text-gray-800" />
-        </button>
-        <h2 className="text-gray-900 font-bold text-lg">
-          {isEditing ? "Editar rutina" : "Nueva rutina"}
-        </h2>
+    <FormScreen title={isEditing ? "Editar rutina" : "Nueva rutina"} onBack={goBack}>
+      <PetPicker pets={pets} value={selectedPetId} onChange={setSelectedPetId} />
+
+      <FieldGroup label="Tipo de ejercicio">
+        <div className="grid grid-cols-2 gap-2">
+          {exerciseTypes.map((t) => (
+            <Button
+              key={t}
+              size="sm"
+              variant="secondary"
+              selected={type === t}
+              onClick={() => setType(t)}
+              block
+            >
+              {exerciseTypeLabels[t]}
+            </Button>
+          ))}
+        </div>
+        {type === "otro" && (
+          <Input
+            value={customTypeDescription}
+            onChange={(e) => setCustomTypeDescription(e.target.value)}
+            placeholder="Describe el tipo de ejercicio"
+            className="mt-2"
+          />
+        )}
+      </FieldGroup>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Duración (min)">
+          <Input
+            type="number"
+            value={durationMinutes}
+            onChange={(e) => setDurationMinutes(e.target.value)}
+            min={1}
+          />
+        </Field>
+        <Field label="Veces al día">
+          <Input
+            type="number"
+            value={timesPerDay}
+            onChange={(e) => setTimesPerDay(e.target.value)}
+            min={1}
+            max={10}
+          />
+        </Field>
       </div>
 
-      <div className="px-5 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto lg:w-full">
-        {/* Mascota */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Mascota
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {pets.map((pet) => (
-              <button
-                key={pet.id}
-                onClick={() => setSelectedDogId(pet.id)}
-                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${selectedPetId === pet.id ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
-              >
-                {pet.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Tipo de ejercicio */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Tipo de ejercicio
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {exerciseTypes.map((t) => (
-              <button
-                key={t}
-                onClick={() => setType(t)}
-                className={`py-2.5 rounded-xl font-semibold text-sm transition-colors text-center ${type === t ? "bg-indigo-600 text-white" : `${exerciseTypeColors[t] ?? "bg-gray-100"} text-gray-800`}`}
-              >
-                {exerciseTypeLabels[t]}
-              </button>
-            ))}
-          </div>
-          {type === "otro" && (
-            <input
-              value={customTypeDescription}
-              onChange={(e) => setCustomTypeDescription(e.target.value)}
-              placeholder="Describe el tipo de ejercicio"
-              className="mt-2 w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          )}
-        </div>
-
-        {/* Duración y repeticiones */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-gray-700 font-semibold text-sm block mb-1">
-              Duración (min)
-            </label>
-            <input
-              type="number"
-              value={durationMinutes}
-              onChange={(e) => setDurationMinutes(e.target.value)}
-              min={1}
-              className="w-full border border-gray-300 rounded-xl px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          </div>
-          <div>
-            <label className="text-gray-700 font-semibold text-sm block mb-1">
-              Veces al día
-            </label>
-            <input
-              type="number"
-              value={timesPerDay}
-              onChange={(e) => setTimesPerDay(e.target.value)}
-              min={1}
-              max={10}
-              className="w-full border border-gray-300 rounded-xl px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          </div>
-        </div>
-
-        {/* Ventana horaria */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-gray-700 font-semibold text-sm block mb-1">
-              Inicio ventana
-            </label>
-            <input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="w-full border border-gray-300 rounded-xl px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          </div>
-          <div>
-            <label className="text-gray-700 font-semibold text-sm block mb-1">
-              Fin ventana
-            </label>
-            <input
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className="w-full border border-gray-300 rounded-xl px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          </div>
-        </div>
-
-        {/* Horarios calculados */}
-        {scheduledTimes.length > 0 && (
-          <div className="bg-green-50 rounded-xl p-3">
-            <p className="text-green-700 font-semibold text-xs mb-1">
-              Horarios calculados
-            </p>
-            <p className="text-green-900 text-sm">
-              {scheduledTimes.join(", ")}
-            </p>
-          </div>
-        )}
-
-        {/* Fecha inicio */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-1">
-            Fecha de inicio
-          </label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Inicio ventana">
+          <Input
+            type="time"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
           />
-        </div>
+        </Field>
+        <Field label="Fin ventana">
+          <Input
+            type="time"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+          />
+        </Field>
+      </div>
 
-        {/* Duración / permanente */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Duración
-          </label>
-          <div className="flex gap-2">
-            <button
+      {scheduledTimes.length > 0 && (
+        <div className="bg-exercise-soft rounded-2xl px-4 py-3">
+          <p className="text-exercise font-bold text-xs mb-1">Horarios calculados</p>
+          <p className="text-ink text-sm">{scheduledTimes.join(", ")}</p>
+        </div>
+      )}
+
+      <Field label="Fecha de inicio">
+        <Input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+        />
+      </Field>
+
+      <FieldGroup label="Duración">
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Button
+              variant="secondary"
+              selected={isPermanent}
               onClick={() => setIsPermanent(true)}
-              className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-colors ${isPermanent ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
+              block
             >
               Permanente
-            </button>
-            <button
+            </Button>
+          </div>
+          <div className="flex-1">
+            <Button
+              variant="secondary"
+              selected={!isPermanent}
               onClick={() => setIsPermanent(false)}
-              className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-colors ${!isPermanent ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
+              block
             >
               Por semanas
-            </button>
+            </Button>
           </div>
-          {!isPermanent && (
-            <div className="mt-2">
-              <label className="text-gray-600 text-xs font-semibold block mb-1">
-                Número de semanas
-              </label>
+        </div>
+        {!isPermanent && (
+          <div className="mt-3">
+            <FieldGroup label="Número de semanas">
               <div className="flex gap-2 mb-2">
                 {[1, 2, 4, 8].map((w) => (
-                  <button
-                    key={w}
-                    onClick={() => setDurationWeeks(w.toString())}
-                    className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${durationWeeks === w.toString() ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
-                  >
-                    {w}s
-                  </button>
+                  <div key={w} className="flex-1">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      selected={durationWeeks === w.toString()}
+                      onClick={() => setDurationWeeks(w.toString())}
+                      block
+                    >
+                      {w}s
+                    </Button>
+                  </div>
                 ))}
               </div>
-              <input
+              <Input
                 type="number"
+                aria-label="Número de semanas"
                 value={durationWeeks}
                 onChange={(e) => setDurationWeeks(e.target.value)}
                 min={1}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
               />
-            </div>
-          )}
-        </div>
-
-        {/* Notificación */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Notificación
-          </label>
-          <select
-            value={notificationTime}
-            onChange={(e) =>
-              setNotificationTime(e.target.value as NotificationTime)
-            }
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-400"
-          >
-            {notificationOptions.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Notas */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-1">
-            Notas
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
-          />
-        </div>
-
-        {error && (
-          <p className="text-red-600 text-sm bg-red-50 rounded-xl px-3 py-2">
-            {error}
-          </p>
+            </FieldGroup>
+          </div>
         )}
+      </FieldGroup>
 
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl text-base disabled:opacity-60 active:scale-95 transition-transform"
+      <Field label="Notificación">
+        <Select
+          value={notificationTime}
+          onChange={(e) => setNotificationTime(e.target.value as NotificationTime)}
         >
-          {saving
-            ? "Guardando..."
-            : isEditing
-              ? "Guardar cambios"
-              : "Agregar rutina"}
-        </button>
-      </div>
-    </div>
+          {notificationOptions.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      <Field label="Notas">
+        <TextArea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+      </Field>
+
+      <ErrorText>{error}</ErrorText>
+
+      <Button block onClick={handleSave} disabled={saving}>
+        {saving ? "Guardando..." : isEditing ? "Guardar cambios" : "Agregar rutina"}
+      </Button>
+    </FormScreen>
   );
 }
 

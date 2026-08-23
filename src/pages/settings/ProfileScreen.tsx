@@ -1,10 +1,11 @@
 import { useState } from "react";
 
 import { ApiError } from "../../api";
+import Button from "../../components/ui/Button";
+import ErrorText from "../../components/ui/ErrorText";
+import { Field } from "../../components/ui/Field";
+import { Input } from "../../components/ui/Input";
 import { useAuth } from "../../context/AuthContext";
-
-const FIELD =
-  "w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 text-sm outline-none focus:ring-2 focus:ring-indigo-400";
 
 /**
  * Lo que es tuyo y no del grupo.
@@ -36,49 +37,47 @@ function ProfileScreen() {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-6 px-5 pt-6 gap-6 lg:max-w-2xl lg:mx-auto lg:w-full">
-      {error && (
-        <p className="text-red-600 text-sm bg-red-50 rounded-xl px-3 py-2">{error}</p>
-      )}
+      <ErrorText>{error}</ErrorText>
 
       <section>
-        <h3 className="text-gray-500 text-xs font-semibold uppercase mb-2">Tu nombre</h3>
-        <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+        <h3 className="text-subtle text-xs font-bold uppercase tracking-wide mb-2">
+          Tu nombre
+        </h3>
+        <div className="bg-white rounded-2xl p-4 shadow-card border border-line flex flex-col gap-3">
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="text-gray-700 font-semibold text-sm block mb-1">
-                Nombre
-              </label>
-              <input
-                value={firstName}
-                onChange={(e) => {
-                  setFirstName(e.target.value);
-                  setSaved(false);
-                }}
-                placeholder="Ana"
-                maxLength={80}
-                className={FIELD}
-              />
+              <Field label="Nombre">
+                <Input
+                  value={firstName}
+                  onChange={(e) => {
+                    setFirstName(e.target.value);
+                    setSaved(false);
+                  }}
+                  placeholder="Ana"
+                  maxLength={80}
+                />
+              </Field>
             </div>
             <div className="flex-1">
-              <label className="text-gray-700 font-semibold text-sm block mb-1">
-                Apellido
-              </label>
-              <input
-                value={lastName}
-                onChange={(e) => {
-                  setLastName(e.target.value);
-                  setSaved(false);
-                }}
-                placeholder="Pérez"
-                maxLength={80}
-                className={FIELD}
-              />
+              <Field label="Apellido">
+                <Input
+                  value={lastName}
+                  onChange={(e) => {
+                    setLastName(e.target.value);
+                    setSaved(false);
+                  }}
+                  placeholder="Pérez"
+                  maxLength={80}
+                />
+              </Field>
             </div>
           </div>
-          <p className="text-xs text-gray-400 -mt-1">
+          <p className="text-xs text-subtle -mt-1">
             Al marcar algo como hecho aparece solo tu nombre.
           </p>
-          <button
+          <Button
+            block
+            disabled={unchanged}
             onClick={() =>
               run(async () => {
                 await updateProfile({
@@ -88,20 +87,20 @@ function ProfileScreen() {
                 setSaved(true);
               })
             }
-            disabled={unchanged}
-            className="bg-indigo-600 text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50 active:scale-95 transition-transform"
           >
             {saved ? "Guardado" : "Guardar nombre"}
-          </button>
+          </Button>
         </div>
       </section>
 
       <section>
-        <h3 className="text-gray-500 text-xs font-semibold uppercase mb-2">Tu cuenta</h3>
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <p className="text-gray-500 text-xs font-semibold mb-1">Correo</p>
-          <p className="text-gray-900 text-sm break-all">{user?.email}</p>
-          <p className="text-xs text-gray-400 mt-2">
+        <h3 className="text-subtle text-xs font-bold uppercase tracking-wide mb-2">
+          Tu cuenta
+        </h3>
+        <div className="bg-white rounded-2xl p-4 shadow-card border border-line">
+          <p className="text-muted text-xs font-bold mb-1">Correo</p>
+          <p className="text-ink text-sm break-all">{user?.email}</p>
+          <p className="text-xs text-subtle mt-2">
             Identifica tu cuenta y no se puede cambiar. Es lo que se muestra a los demás
             mientras no pongas tu nombre.
           </p>
@@ -109,28 +108,27 @@ function ProfileScreen() {
       </section>
 
       <section>
-        <h3 className="text-gray-500 text-xs font-semibold uppercase mb-2">
+        <h3 className="text-subtle text-xs font-bold uppercase tracking-wide mb-2">
           Unirme a otro grupo
         </h3>
-        <div className="bg-white rounded-2xl p-4 shadow-sm flex gap-2">
-          <input
+        <div className="bg-white rounded-2xl p-4 shadow-card border border-line flex gap-2">
+          <Input
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value)}
             placeholder="Pega el código aquí"
-            className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-indigo-400"
+            className="flex-1"
           />
-          <button
+          <Button
+            disabled={!joinCode.trim()}
             onClick={() =>
               run(async () => {
                 await redeemInvitation(joinCode.trim());
                 setJoinCode("");
               })
             }
-            disabled={!joinCode.trim()}
-            className="bg-indigo-600 text-white font-semibold px-4 rounded-xl text-sm disabled:opacity-50 active:scale-95 transition-transform"
           >
             Unirme
-          </button>
+          </Button>
         </div>
       </section>
     </div>

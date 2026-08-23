@@ -6,6 +6,7 @@ import Button from "../../components/ui/Button";
 import Chip from "../../components/ui/Chip";
 import ConfirmSheet from "../../components/ui/ConfirmSheet";
 import EmptyState from "../../components/ui/EmptyState";
+import ScreenHeader from "../../components/ui/ScreenHeader";
 import PetPhoto from "../../components/pets/PetPhoto";
 import type { MealTime } from "../../types";
 import { useMealTimes, useMedications, usePets } from "../../hooks/queries";
@@ -78,21 +79,24 @@ function MealTimesSettingsScreen() {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-6 px-5 pt-5 lg:max-w-3xl lg:mx-auto lg:w-full">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-gray-900 font-bold text-lg">Horarios de comida</h2>
-        {!isAdding && (
-          <button
-            onClick={() => {
-              setIsAdding(true);
-              setError(null);
-            }}
-            className="flex items-center gap-1 bg-brand-gradient text-white px-4 py-2 rounded-full text-sm font-bold active:scale-95 transition-transform"
-          >
-            <Plus size={16} />
-            Agregar
-          </button>
-        )}
-      </div>
+      <ScreenHeader
+        title="Horarios de comida"
+        className="mb-4"
+        action={
+          !isAdding && (
+            <Button
+              size="sm"
+              onClick={() => {
+                setIsAdding(true);
+                setError(null);
+              }}
+              leading={<Plus size={16} aria-hidden />}
+            >
+              Agregar
+            </Button>
+          )
+        }
+      />
 
       {/* Cada mascota come a sus horas: un cachorro y un perro adulto no comparten pauta. */}
       {pets.length > 1 && (
@@ -125,7 +129,7 @@ function MealTimesSettingsScreen() {
 
       {/* Form nueva comida */}
       {isAdding && (
-        <div className="bg-white rounded-2xl shadow-sm p-4 mb-4 ring-2 ring-brand/20">
+        <div className="bg-white rounded-2xl shadow-card p-4 mb-4 ring-2 ring-brand/20">
           <p className="text-ink font-bold mb-3">Nueva comida</p>
           <label className="text-muted text-xs font-bold block mb-1">
             Nombre
@@ -171,7 +175,7 @@ function MealTimesSettingsScreen() {
       {/* Lista */}
       <div className="flex flex-col gap-3">
         {mealTimes.map((meal) => (
-          <div key={meal.id} className="bg-white rounded-2xl shadow-sm p-4">
+          <div key={meal.id} className="bg-white rounded-2xl shadow-card p-4">
             {editingId === meal.id ? (
               <>
                 <input
@@ -218,8 +222,8 @@ function MealTimesSettingsScreen() {
                   <Soup size={20} className="text-subtle" aria-hidden />
                 </div>
                 <div className="flex-1">
-                  <p className="text-gray-900 font-semibold">{meal.name}</p>
-                  <p className="text-gray-500 text-sm">{shortTime(meal.time)}</p>
+                  <p className="text-ink font-bold">{meal.name}</p>
+                  <p className="text-subtle text-sm">{shortTime(meal.time)}</p>
                 </div>
                 <div className="flex gap-2">
                   <button

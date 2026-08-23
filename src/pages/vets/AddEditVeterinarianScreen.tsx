@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft } from "lucide-react";
+
+import PetPicker from "../../components/pets/PetPicker";
+import Button from "../../components/ui/Button";
+import ErrorText from "../../components/ui/ErrorText";
+import { Field } from "../../components/ui/Field";
+import FormScreen from "../../components/ui/FormScreen";
+import { Input, TextArea } from "../../components/ui/Input";
 import { usePetOptions, useVeterinarians } from "../../hooks/queries";
 
 function AddEditVeterinarianScreen() {
@@ -16,7 +22,7 @@ function AddEditVeterinarianScreen() {
     : undefined;
   const pets = usePetOptions(existing?.pet_id);
 
-  const [selectedPetId, setSelectedDogId] = useState(
+  const [selectedPetId, setSelectedPetId] = useState(
     existing?.pet_id ?? pets[0]?.id ?? "",
   );
   const [name, setName] = useState(existing?.name ?? "");
@@ -61,138 +67,72 @@ function AddEditVeterinarianScreen() {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto pb-6">
-      <div className="px-5 pt-5 pb-3 flex items-center gap-2 lg:max-w-3xl lg:mx-auto lg:w-full">
-        <button
-          onClick={goBack}
-          className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform shrink-0"
-        >
-          <ArrowLeft size={18} className="text-gray-800" />
-        </button>
-        <h2 className="text-gray-900 font-bold text-lg">
-          {isEditing ? "Editar veterinario" : "Agregar veterinario"}
-        </h2>
-      </div>
+    <FormScreen
+      title={isEditing ? "Editar veterinario" : "Agregar veterinario"}
+      onBack={goBack}
+    >
+      <PetPicker pets={pets} value={selectedPetId} onChange={setSelectedPetId} />
 
-      <div className="px-5 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto lg:w-full">
-        {/* Mascota */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Mascota
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {pets.map((pet) => (
-              <button
-                key={pet.id}
-                onClick={() => setSelectedDogId(pet.id)}
-                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
-                  selectedPetId === pet.id
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                {pet.name}
-              </button>
-            ))}
-          </div>
-        </div>
+      <Field label="Nombre del veterinario" required>
+        <Input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Dr. Juan Pérez"
+        />
+      </Field>
 
-        {/* Nombre del veterinario */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Nombre del veterinario *
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Dr. Juan Pérez"
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-        </div>
+      <Field label="Clínica / Centro veterinario">
+        <Input
+          type="text"
+          value={clinicName}
+          onChange={(e) => setClinicName(e.target.value)}
+          placeholder="Clínica Veterinaria San Francisco"
+        />
+      </Field>
 
-        {/* Nombre de la clínica */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Clínica / Centro veterinario
-          </label>
-          <input
-            type="text"
-            value={clinicName}
-            onChange={(e) => setClinicName(e.target.value)}
-            placeholder="Clínica Veterinaria San Francisco"
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-        </div>
+      <Field label="Teléfono">
+        <Input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="+56 9 1234 5678"
+        />
+      </Field>
 
-        {/* Teléfono */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Teléfono
-          </label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+56 9 1234 5678"
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-        </div>
+      <Field label="Email">
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="contacto@clinica.cl"
+        />
+      </Field>
 
-        {/* Email */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Email
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="contacto@clinica.cl"
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-        </div>
+      <Field label="Dirección">
+        <Input
+          type="text"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="Av. Principal 123, Providencia"
+        />
+      </Field>
 
-        {/* Dirección */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Dirección
-          </label>
-          <input
-            type="text"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="Av. Principal 123, Providencia"
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-        </div>
+      <Field label="Notas">
+        <TextArea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Horarios de atención, especialidad, etc."
+          rows={3}
+        />
+      </Field>
 
-        {/* Notas */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Notas
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Horarios de atención, especialidad, etc."
-            rows={3}
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
-          />
-        </div>
+      <ErrorText>{error}</ErrorText>
 
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-
-        {/* Botón guardar */}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full bg-indigo-600 text-white font-semibold py-3.5 rounded-2xl active:scale-95 transition-transform disabled:opacity-60"
-        >
-          {saving ? "Guardando..." : isEditing ? "Guardar cambios" : "Agregar"}
-        </button>
-      </div>
-    </div>
+      <Button block onClick={handleSave} disabled={saving}>
+        {saving ? "Guardando..." : isEditing ? "Guardar cambios" : "Agregar"}
+      </Button>
+    </FormScreen>
   );
 }
 

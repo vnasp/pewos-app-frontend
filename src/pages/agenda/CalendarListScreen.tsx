@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import CalendarMonthView from "../../components/calendar/CalendarMonthView";
 import AppointmentCard from "../../components/calendar/AppointmentCard";
+import Button from "../../components/ui/Button";
 import ConfirmSheet from "../../components/ui/ConfirmSheet";
 import { useAppointments, usePets } from "../../hooks/queries";
 import { formatLocalDate, parseLocalDate, shortTime } from "../../utils/date";
@@ -173,28 +174,30 @@ function CalendarListScreen() {
     <div className="flex flex-col h-full overflow-y-auto pb-6">
       {/* Toggle de vista */}
       <div className="px-5 pt-5 pb-3 flex gap-2">
-        <button
-          onClick={() => setViewMode("list")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl font-semibold text-sm transition-colors ${
-            viewMode === "list"
-              ? "bg-indigo-600 text-white"
-              : "bg-indigo-100 text-indigo-700"
-          }`}
-        >
-          <List size={16} />
-          Lista
-        </button>
-        <button
-          onClick={() => setViewMode("calendar")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl font-semibold text-sm transition-colors ${
-            viewMode === "calendar"
-              ? "bg-indigo-600 text-white"
-              : "bg-indigo-100 text-indigo-700"
-          }`}
-        >
-          <CalendarDays size={16} />
-          Calendario
-        </button>
+        <div className="flex-1">
+          <Button
+            size="sm"
+            variant="secondary"
+            selected={viewMode === "list"}
+            onClick={() => setViewMode("list")}
+            leading={<List size={16} aria-hidden />}
+            block
+          >
+            Lista
+          </Button>
+        </div>
+        <div className="flex-1">
+          <Button
+            size="sm"
+            variant="secondary"
+            selected={viewMode === "calendar"}
+            onClick={() => setViewMode("calendar")}
+            leading={<CalendarDays size={16} aria-hidden />}
+            block
+          >
+            Calendario
+          </Button>
+        </div>
       </div>
 
       {/* Vista Calendario */}
@@ -208,7 +211,7 @@ function CalendarListScreen() {
 
           {/* Citas del día seleccionado */}
           <div className="px-5">
-            <h3 className="text-gray-700 font-bold text-sm mb-3">
+            <h3 className="text-muted font-bold text-sm mb-3">
               {selectedCalDate
                 ? selectedCalDate
                     .toLocaleDateString("es-ES", {
@@ -220,7 +223,7 @@ function CalendarListScreen() {
                 : "Selecciona un día"}
             </h3>
             {selectedDayAppointments.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+              <div className="flex flex-col items-center justify-center py-10 text-subtle">
                 <Calendar size={40} strokeWidth={1.5} />
                 <p className="mt-3 text-sm text-center">Sin citas este día</p>
               </div>
@@ -246,33 +249,33 @@ function CalendarListScreen() {
           <div className="px-5 pb-3">
             <div className="flex gap-2">
               {filterBtns.map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setFilter(key)}
-                  className={`flex-1 py-2 rounded-xl font-semibold text-sm transition-colors ${
-                    filter === key
-                      ? "bg-indigo-600 text-white"
-                      : "bg-indigo-100 text-indigo-700"
-                  }`}
-                >
-                  {label}
-                </button>
+                <div key={key} className="flex-1">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    selected={filter === key}
+                    onClick={() => setFilter(key)}
+                    block
+                  >
+                    {label}
+                  </Button>
+                </div>
               ))}
             </div>
           </div>
 
           <div className="px-5">
             {pets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+              <div className="flex flex-col items-center justify-center py-20 text-subtle">
                 <Dog size={64} strokeWidth={1.5} />
-                <p className="mt-4 text-base text-gray-500 text-center">
+                <p className="mt-4 text-base text-subtle text-center">
                   Primero agrega una mascota
                 </p>
               </div>
             ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+              <div className="flex flex-col items-center justify-center py-20 text-subtle">
                 <Calendar size={64} strokeWidth={1.5} />
-                <p className="mt-4 text-base text-gray-500 text-center">
+                <p className="mt-4 text-base text-subtle text-center">
                   No hay citas{" "}
                   {filter === "upcoming"
                     ? "próximas"
@@ -291,22 +294,22 @@ function CalendarListScreen() {
                         onClick={() => toggleMonth(key)}
                         className="w-full flex items-center justify-between py-2.5 px-1 mb-1"
                       >
-                        <span className="text-indigo-700 font-bold text-sm capitalize">
+                        <span className="text-brand font-bold text-sm capitalize">
                           {label}
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-indigo-400 font-semibold">
+                          <span className="text-xs text-brand font-semibold">
                             {items.length} cita{items.length !== 1 ? "s" : ""}
                           </span>
                           {open ? (
                             <ChevronDown
                               size={15}
-                              className="text-indigo-400"
+                              className="text-brand"
                             />
                           ) : (
                             <ChevronRight
                               size={15}
-                              className="text-indigo-400"
+                              className="text-brand"
                             />
                           )}
                         </div>

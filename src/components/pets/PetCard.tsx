@@ -21,7 +21,7 @@ function PetCard({ pet, canWrite }: PetCardProps) {
   const details = (
     <>
       <div
-        className={`w-20 h-20 bg-gray-200 rounded-xl overflow-hidden shrink-0 ${archived ? "grayscale" : ""}`}
+        className={`w-20 h-20 bg-canvas rounded-xl overflow-hidden shrink-0 ${archived ? "grayscale" : ""}`}
       >
         <PetPhoto
           url={pet.photo_url}
@@ -35,9 +35,9 @@ function PetCard({ pet, canWrite }: PetCardProps) {
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-gray-900 text-xl font-bold mb-0.5 truncate">{pet.name}</p>
-        <p className="text-gray-600 text-sm mb-1">{pet.breed ?? ""}</p>
-        <div className="flex items-center gap-2 text-gray-500 text-sm flex-wrap">
+        <p className="text-ink text-xl font-bold mb-0.5 truncate">{pet.name}</p>
+        <p className="text-muted text-sm mb-1">{pet.breed ?? ""}</p>
+        <div className="flex items-center gap-2 text-subtle text-sm flex-wrap">
           {age !== null && (
             <>
               <span>{age} años</span>
@@ -53,7 +53,7 @@ function PetCard({ pet, canWrite }: PetCardProps) {
           )}
         </div>
         {pet.weight_kg && (
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-subtle text-sm mt-1">
             {pet.weight_kg} kg
             {pet.weight_recorded_on && ` · ${formatShortDate(pet.weight_recorded_on)}`}
           </p>
@@ -70,7 +70,7 @@ function PetCard({ pet, canWrite }: PetCardProps) {
 
   return (
     <div
-      className={`bg-white rounded-2xl shadow-sm overflow-hidden ${archived ? "opacity-75" : ""}`}
+      className={`bg-white rounded-2xl shadow-card overflow-hidden ${archived ? "opacity-75" : ""}`}
     >
       {/* La tarjeta entera lleva a editar, y eliminar vive dentro de esa vista: un botón
           rojo permanente acá era ruido y un toque accidental esperando a pasar. */}
@@ -97,7 +97,7 @@ function PetCard({ pet, canWrite }: PetCardProps) {
       <Link
         to={`/mascotas/${pet.id}/horarios`}
         {...preloadOn("/mascotas/:id/horarios")}
-        className="flex items-center gap-2 border-t border-gray-100 px-4 py-3 active:bg-canvas transition-colors"
+        className="flex items-center gap-2 border-t border-line px-4 py-3 active:bg-canvas transition-colors"
       >
         <Soup size={16} className="text-subtle shrink-0" aria-hidden />
         <span className="text-muted font-semibold text-sm flex-1">Horarios de comida</span>

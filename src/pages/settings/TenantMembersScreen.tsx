@@ -4,7 +4,11 @@ import { useState } from "react";
 import * as apiClient from "../../api";
 import { ApiError } from "../../api";
 import InvitationsSheet from "../../components/settings/InvitationsSheet";
+import Button from "../../components/ui/Button";
 import ConfirmSheet from "../../components/ui/ConfirmSheet";
+import ErrorText from "../../components/ui/ErrorText";
+import { Field } from "../../components/ui/Field";
+import { Input, Select } from "../../components/ui/Input";
 import Spinner from "../../components/ui/Spinner";
 import {
   countries,
@@ -18,9 +22,6 @@ import type { TenantRole } from "../../types";
 import { fullName, initial } from "../../utils/name";
 
 const ASSIGNABLE_ROLES: TenantRole[] = ["owner", "member", "viewer"];
-
-const FIELD =
-  "w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 text-sm outline-none focus:ring-2 focus:ring-indigo-400 disabled:bg-gray-50 disabled:text-gray-500";
 
 /**
  * Solo lo que es del grupo.
@@ -72,42 +73,40 @@ function TenantMembersScreen() {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-6 px-5 pt-6 gap-6 lg:max-w-2xl lg:mx-auto lg:w-full">
-      {error && (
-        <p className="text-red-600 text-sm bg-red-50 rounded-xl px-3 py-2">{error}</p>
-      )}
+      <ErrorText>{error}</ErrorText>
 
       {activeTenant && (
         <section>
-          <h3 className="text-gray-500 text-xs font-semibold uppercase mb-2">
+          <h3 className="text-subtle text-xs font-bold uppercase tracking-wide mb-2">
             Datos del grupo
           </h3>
-          <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-3">
-            <div>
-              <label className="text-gray-700 font-semibold text-sm block mb-1">
-                Nombre
-              </label>
-              <input
+          <div className="bg-white rounded-2xl p-4 shadow-card border border-line flex flex-col gap-3">
+            <Field label="Nombre">
+              <Input
                 value={groupName}
                 onChange={(e) => {
                   setGroupName(e.target.value);
                   setSaved(false);
                 }}
                 disabled={!isOwner}
-                className={FIELD}
               />
-            </div>
-            <div>
-              <label className="text-gray-700 font-semibold text-sm block mb-1">
-                País
-              </label>
-              <select
+            </Field>
+
+            <Field
+              label="País"
+              hint={
+                currentTimeIn(country)
+                  ? `Ahí son las ${currentTimeIn(country)}. Es la hora con la que vencen los recordatorios de todo el grupo.`
+                  : "Define a qué hora vencen los recordatorios para todo el grupo."
+              }
+            >
+              <Select
                 value={country}
                 onChange={(e) => {
                   setCountry(e.target.value);
                   setSaved(false);
                 }}
                 disabled={!isOwner}
-                className={FIELD}
               >
                 {/* Una zona guardada que no está en la lista —Magallanes, un país que
                     falte— tiene que poder seguir seleccionada, o abrir esta pantalla y
@@ -120,15 +119,16 @@ function TenantMembersScreen() {
                     {option.name}
                   </option>
                 ))}
-              </select>
-              <p className="text-xs text-gray-400 mt-1">
-                {currentTimeIn(country)
-                  ? `Ahí son las ${currentTimeIn(country)}. Es la hora con la que vencen los recordatorios de todo el grupo.`
-                  : "Define a qué hora vencen los recordatorios para todo el grupo."}
-              </p>
-            </div>
+              </Select>
+            </Field>
+
             {isOwner && (
-              <button
+              <Button
+                block
+                disabled={
+                  !groupName.trim() ||
+                  (groupName === activeTenant.name && country === activeTenant.timezone)
+                }
                 onClick={() =>
                   run(async () => {
                     await apiClient.tenants.update(activeTenant.id, {
@@ -138,14 +138,9 @@ function TenantMembersScreen() {
                     setSaved(true);
                   })
                 }
-                disabled={
-                  !groupName.trim() ||
-                  (groupName === activeTenant.name && country === activeTenant.timezone)
-                }
-                className="bg-indigo-600 text-white font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50 active:scale-95 transition-transform"
               >
                 {saved ? "Guardado" : "Guardar cambios"}
-              </button>
+              </Button>
             )}
           </div>
         </section>
@@ -153,17 +148,14 @@ function TenantMembersScreen() {
 
       <section>
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-gray-500 text-xs font-semibold uppercase">
+          <h3 className="text-subtle text-xs font-bold uppercase tracking-wide">
             Integrantes ({members.length})
           </h3>
           {isOwner && (
-            <button
-              onClick={() => setInviting(true)}
-              className="flex items-center gap-1.5 bg-brand-soft text-brand font-bold px-3 py-1.5 rounded-full text-xs active:scale-95 transition-transform"
-            >
+            <Button size="sm" variant="secondary" onClick={() => setInviting(true)}>
               <UserPlus size={14} aria-hidden />
               Invitar
-            </button>
+            </Button>
           )}
         </div>
 
@@ -173,21 +165,21 @@ function TenantMembersScreen() {
             return (
               <div
                 key={member.user_id}
-                className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3"
+                className="bg-white rounded-2xl p-4 shadow-card border border-line flex items-center gap-3"
               >
-                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center shrink-0 text-indigo-700 font-bold">
+                <div className="w-10 h-10 bg-brand-soft rounded-full flex items-center justify-center shrink-0 text-brand font-extrabold">
                   {initial(member)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-gray-900 font-semibold text-sm truncate">
+                  <p className="text-ink font-bold text-sm truncate">
                     {fullName(member)}
-                    {isMe && <span className="text-gray-400 font-normal"> (tú)</span>}
+                    {isMe && <span className="text-subtle font-medium"> (tú)</span>}
                   </p>
-                  <p className="text-gray-500 text-xs truncate">{member.email}</p>
+                  <p className="text-subtle text-xs truncate">{member.email}</p>
                 </div>
 
                 {isOwner ? (
-                  <select
+                  <Select
                     value={member.role}
                     onChange={(e) =>
                       run(() =>
@@ -197,27 +189,29 @@ function TenantMembersScreen() {
                         }),
                       )
                     }
-                    className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs text-gray-700 outline-none focus:ring-2 focus:ring-indigo-400"
+                    aria-label={`Rol de ${member.email}`}
+                    className="w-auto px-2 py-1.5 text-xs rounded-lg"
                   >
                     {ASSIGNABLE_ROLES.map((role) => (
                       <option key={role} value={role}>
                         {roleLabels[role]}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 ) : (
-                  <span className="text-gray-500 text-xs shrink-0">
+                  <span className="text-subtle text-xs shrink-0">
                     {roleLabels[member.role]}
                   </span>
                 )}
 
                 {isOwner && !isMe && (
                   <button
+                    type="button"
                     onClick={() => setMemberToRemove(member)}
                     aria-label={`Quitar a ${member.email}`}
-                    className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center shrink-0 active:scale-90 transition-transform"
+                    className="w-8 h-8 bg-danger-soft rounded-lg flex items-center justify-center shrink-0 active:scale-90 transition-transform"
                   >
-                    <Trash2 size={14} className="text-red-600" aria-hidden />
+                    <Trash2 size={14} className="text-danger" aria-hidden />
                   </button>
                 )}
               </div>
@@ -227,13 +221,10 @@ function TenantMembersScreen() {
       </section>
 
       {activeTenant && (
-        <button
-          onClick={() => setLeaving(true)}
-          className="flex items-center justify-center gap-2 border-2 border-red-500 text-red-600 font-semibold py-3 rounded-xl text-sm active:bg-red-50 transition-colors"
-        >
+        <Button variant="danger" block onClick={() => setLeaving(true)}>
           <LogOut size={16} aria-hidden />
           Salir de este grupo
-        </button>
+        </Button>
       )}
 
       <InvitationsSheet

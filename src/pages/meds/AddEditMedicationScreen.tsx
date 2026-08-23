@@ -1,19 +1,18 @@
-import { useState, useEffect } from "react";
+import { Clock, Utensils } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Clock, Utensils } from "lucide-react";
+
+import PetPicker from "../../components/pets/PetPicker";
+import Button from "../../components/ui/Button";
+import ErrorText from "../../components/ui/ErrorText";
+import { Field, FieldGroup } from "../../components/ui/Field";
+import FormScreen from "../../components/ui/FormScreen";
+import { Input, Select, TextArea } from "../../components/ui/Input";
+import { notificationOptions } from "../../constants/labels";
+import { useMealTimes, useMedications, usePetOptions } from "../../hooks/queries";
+import type { NotificationTime, ScheduleType } from "../../types";
 import { addDays, shortTime, today } from "../../utils/date";
 import { calculateTimesFromHours } from "../../utils/schedule";
-import type { ScheduleType, NotificationTime } from "../../types";
-import { useMealTimes, useMedications, usePetOptions } from "../../hooks/queries";
-
-const notificationOptions: { value: NotificationTime; label: string }[] = [
-  { value: "none", label: "Sin notificación" },
-  { value: "15min", label: "15 min antes" },
-  { value: "30min", label: "30 min antes" },
-  { value: "1h", label: "1 hora antes" },
-  { value: "2h", label: "2 horas antes" },
-  { value: "1day", label: "1 día antes" },
-];
 
 function AddEditMedicationScreen() {
   const { id: medicationId } = useParams();
@@ -26,7 +25,7 @@ function AddEditMedicationScreen() {
   const existing = medicationId ? byId(medicationId) : undefined;
   const pets = usePetOptions(existing?.pet_id);
 
-  const [selectedPetId, setSelectedDogId] = useState(
+  const [selectedPetId, setSelectedPetId] = useState(
     existing?.pet_id ?? pets[0]?.id ?? "",
   );
   const [name, setName] = useState(existing?.name ?? "");
@@ -153,262 +152,200 @@ function AddEditMedicationScreen() {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto pb-6">
-      <div className="px-5 pt-5 pb-3 flex items-center gap-2 lg:max-w-3xl lg:mx-auto lg:w-full">
-        <button
-          onClick={goBack}
-          className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform shrink-0"
-        >
-          <ArrowLeft size={18} className="text-gray-800" />
-        </button>
-        <h2 className="text-gray-900 font-bold text-lg">
-          {isEditing ? "Editar medicamento" : "Nuevo medicamento"}
-        </h2>
-      </div>
+    <FormScreen
+      title={isEditing ? "Editar medicamento" : "Nuevo medicamento"}
+      onBack={goBack}
+    >
+      <PetPicker
+        pets={pets}
+        value={selectedPetId}
+        onChange={(id) => {
+          setSelectedPetId(id);
+          // Los horarios marcados eran de la otra mascota, y la API los rechaza:
+          // limpiarlos evita un 400 que el usuario no sabría interpretar.
+          if (id !== selectedPetId) setSelectedMealIds([]);
+        }}
+      />
 
-      <div className="px-5 flex flex-col gap-4 lg:max-w-3xl lg:mx-auto lg:w-full">
-        {/* Mascota */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Mascota
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {pets.map((pet) => (
-              <button
-                key={pet.id}
-                onClick={() => {
-                  setSelectedDogId(pet.id);
-                  // Los horarios marcados eran de la otra mascota, y la API los rechaza:
-                  // limpiarlos evita un 400 que el usuario no sabría interpretar.
-                  if (pet.id !== selectedPetId) setSelectedMealIds([]);
-                }}
-                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${selectedPetId === pet.id ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
-              >
-                {pet.name}
-              </button>
-            ))}
-          </div>
-        </div>
+      <Field label="Nombre del medicamento" required>
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Ej: Ibuprofeno, Amoxicilina..."
+        />
+      </Field>
 
-        {/* Nombre + Dosis */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-1">
-            Nombre del medicamento *
-          </label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ej: Ibuprofeno, Amoxicilina..."
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-        </div>
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-1">
-            Dosis *
-          </label>
-          <input
-            value={dosage}
-            onChange={(e) => setDosage(e.target.value)}
-            placeholder="Ej: 1 pastilla, 5ml..."
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-        </div>
+      <Field label="Dosis" required>
+        <Input
+          value={dosage}
+          onChange={(e) => setDosage(e.target.value)}
+          placeholder="Ej: 1 pastilla, 5ml..."
+        />
+      </Field>
 
-        {/* Tipo de programación */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Programar por
-          </label>
-          <div className="flex gap-2">
-            <button
+      <FieldGroup label="Programar por">
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Button
+              variant="secondary"
+              selected={scheduleType === "hours"}
               onClick={() => setScheduleType("hours")}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-colors ${scheduleType === "hours" ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
+              leading={<Clock size={16} aria-hidden />}
+              block
             >
-              <Clock size={16} /> Horas
-            </button>
-            <button
+              Horas
+            </Button>
+          </div>
+          <div className="flex-1">
+            <Button
+              variant="secondary"
+              selected={scheduleType === "meals"}
               onClick={() => setScheduleType("meals")}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-colors ${scheduleType === "meals" ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
+              leading={<Utensils size={16} aria-hidden />}
+              block
             >
-              <Utensils size={16} /> Comidas
-            </button>
+              Comidas
+            </Button>
           </div>
         </div>
+      </FieldGroup>
 
-        {scheduleType === "hours" ? (
-          <div className="flex flex-col gap-3">
-            <div>
-              <label className="text-gray-700 font-semibold text-sm block mb-1">
-                Cada cuántas horas
-              </label>
-              <div className="flex gap-2 mb-2">
-                {[6, 8, 12, 24].map((h) => (
-                  <button
-                    key={h}
+      {scheduleType === "hours" ? (
+        <>
+          <FieldGroup label="Cada cuántas horas">
+            <div className="flex gap-2 mb-2">
+              {[6, 8, 12, 24].map((h) => (
+                <div key={h} className="flex-1">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    selected={frequencyHours === h.toString()}
                     onClick={() => setFrequencyHours(h.toString())}
-                    className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${frequencyHours === h.toString() ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
+                    block
                   >
                     {h}h
-                  </button>
-                ))}
-              </div>
-              <input
-                type="number"
-                value={frequencyHours}
-                onChange={(e) => setFrequencyHours(e.target.value)}
-                min={1}
-                max={24}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-              />
-            </div>
-            <div>
-              <label className="text-gray-700 font-semibold text-sm block mb-1">
-                Primera dosis
-              </label>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-              />
-            </div>
-          </div>
-        ) : (
-          <div>
-            <label className="text-gray-700 font-semibold text-sm block mb-2">
-              Con cuáles comidas
-            </label>
-            {mealTimes.map((meal) => (
-              <button
-                key={meal.id}
-                onClick={() => toggleMeal(meal.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-2 border-2 transition-colors ${selectedMealIds.includes(meal.id) ? "border-indigo-600 bg-indigo-50" : "border-gray-200"}`}
-              >
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedMealIds.includes(meal.id) ? "bg-indigo-600 border-indigo-600" : "border-gray-300"}`}
-                >
-                  {selectedMealIds.includes(meal.id) && (
-                    <div className="w-2.5 h-2.5 bg-white rounded-full" />
-                  )}
+                  </Button>
                 </div>
-                <span className="text-gray-800 font-semibold text-sm">
-                  {meal.name}
-                </span>
-                <span className="ml-auto text-gray-500 text-xs">
-                  {shortTime(meal.time)}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Horarios calculados */}
-        {scheduledTimes.length > 0 && (
-          <div className="bg-blue-50 rounded-xl p-3">
-            <p className="text-blue-700 font-semibold text-xs mb-1">
-              Horarios calculados
-            </p>
-            <p className="text-blue-900 text-sm">{scheduledTimes.join(", ")}</p>
-          </div>
-        )}
-
-        {/* Duración y fecha inicio */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-gray-700 font-semibold text-sm block mb-1">
-              Inicio
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-xl px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-            />
-          </div>
-          <div>
-            <label className="text-gray-700 font-semibold text-sm block mb-1">
-              Duración (días)
-            </label>
-            <input
+              ))}
+            </div>
+            <Input
               type="number"
-              value={durationDays}
-              onChange={(e) => setDurationDays(e.target.value)}
-              min={0}
-              placeholder="0=continuo"
-              className="w-full border border-gray-300 rounded-xl px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
+              aria-label="Cada cuántas horas"
+              value={frequencyHours}
+              onChange={(e) => setFrequencyHours(e.target.value)}
+              min={1}
+              max={24}
             />
+          </FieldGroup>
+
+          <Field label="Primera dosis">
+            <Input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+            />
+          </Field>
+        </>
+      ) : (
+        <FieldGroup label="Con cuáles comidas">
+          <div className="flex flex-col gap-2">
+            {mealTimes.map((meal) => {
+              const picked = selectedMealIds.includes(meal.id);
+              return (
+                <button
+                  key={meal.id}
+                  type="button"
+                  onClick={() => toggleMeal(meal.id)}
+                  aria-pressed={picked}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 transition-colors ${picked ? "border-brand bg-brand-soft" : "border-line"}`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${picked ? "bg-brand border-brand" : "border-line"}`}
+                  >
+                    {picked && <div className="w-2 h-2 bg-white rounded-full" />}
+                  </div>
+                  <span className="text-ink font-bold text-sm">{meal.name}</span>
+                  <span className="ml-auto text-subtle text-xs">
+                    {shortTime(meal.time)}
+                  </span>
+                </button>
+              );
+            })}
           </div>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {[3, 7, 20, 30].map((d) => (
-            <button
-              key={d}
-              onClick={() => setDurationDays(d.toString())}
-              className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition-colors ${durationDays === d.toString() ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
-            >
-              {d} días
-            </button>
-          ))}
-          <button
-            onClick={() => setDurationDays("0")}
-            className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition-colors ${durationDays === "0" ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
-          >
-            Continuo
-          </button>
-        </div>
+        </FieldGroup>
+      )}
 
-        {/* Notificación */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">
-            Notificación
-          </label>
-          <select
-            value={notificationTime}
-            onChange={(e) =>
-              setNotificationTime(e.target.value as NotificationTime)
-            }
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:ring-2 focus:ring-indigo-400"
-          >
-            {notificationOptions.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+      {scheduledTimes.length > 0 && (
+        <div className="bg-appointment-soft rounded-2xl px-4 py-3">
+          <p className="text-appointment font-bold text-xs mb-1">Horarios calculados</p>
+          <p className="text-ink text-sm">{scheduledTimes.join(", ")}</p>
         </div>
+      )}
 
-        {/* Notas */}
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-1">
-            Notas
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Inicio">
+          <Input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
           />
-        </div>
-
-        {error && (
-          <p className="text-red-600 text-sm bg-red-50 rounded-xl px-3 py-2">
-            {error}
-          </p>
-        )}
-
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl text-base disabled:opacity-60 active:scale-95 transition-transform"
-        >
-          {saving
-            ? "Guardando..."
-            : isEditing
-              ? "Guardar cambios"
-              : "Agregar medicamento"}
-        </button>
+        </Field>
+        <Field label="Duración (días)">
+          <Input
+            type="number"
+            value={durationDays}
+            onChange={(e) => setDurationDays(e.target.value)}
+            min={0}
+            placeholder="0=continuo"
+          />
+        </Field>
       </div>
-    </div>
+
+      <div className="flex gap-2 flex-wrap">
+        {[3, 7, 20, 30].map((d) => (
+          <Button
+            key={d}
+            size="sm"
+            variant="secondary"
+            selected={durationDays === d.toString()}
+            onClick={() => setDurationDays(d.toString())}
+          >
+            {d} días
+          </Button>
+        ))}
+        <Button
+          size="sm"
+          variant="secondary"
+          selected={durationDays === "0"}
+          onClick={() => setDurationDays("0")}
+        >
+          Continuo
+        </Button>
+      </div>
+
+      <Field label="Notificación">
+        <Select
+          value={notificationTime}
+          onChange={(e) => setNotificationTime(e.target.value as NotificationTime)}
+        >
+          {notificationOptions.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      <Field label="Notas">
+        <TextArea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+      </Field>
+
+      <ErrorText>{error}</ErrorText>
+
+      <Button block onClick={handleSave} disabled={saving}>
+        {saving ? "Guardando..." : isEditing ? "Guardar cambios" : "Agregar medicamento"}
+      </Button>
+    </FormScreen>
   );
 }
 

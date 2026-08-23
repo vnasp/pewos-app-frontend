@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
-import { preloadOn } from "../../routes";
-import { Dumbbell, HeartPulse, LogOut, Pill, Users } from "lucide-react";
+import { LogOut, Users } from "lucide-react";
 
-import { roleLabels } from "../../constants/labels";
+import { preloadOn } from "../../routes";
+
+import Button from "../../components/ui/Button";
 import ConfirmSheet from "../../components/ui/ConfirmSheet";
+import { categoryStyles } from "../../constants/categories";
+import { roleLabels } from "../../constants/labels";
 import { useAuth } from "../../context/AuthContext";
 import { fullName, initial } from "../../utils/name";
 
@@ -15,34 +18,25 @@ function SettingsScreen() {
 
   const [confirmSignOut, setConfirmSignOut] = useState(false);
 
+  /**
+   * Icono y color salen de `categoryStyles`, que es de donde los saca el resto de la app.
+   *
+   * Escritos a mano acá estaban cruzados: medicamentos en rosa suelto, ejercicios en el
+   * verde de "hecho" y cuidados en el rosa de los medicamentos. Quien viniera de la
+   * pantalla de Hoy veía otro color para lo mismo.
+   */
   const items = [
-    {
-      label: "Medicamentos",
-      icon: Pill,
-      path: "/ajustes/medicamentos",
-      color: "bg-pink-100",
-      fg: "text-pink-600",
-    },
-    {
-      label: "Rutinas de ejercicio",
-      icon: Dumbbell,
-      path: "/ajustes/ejercicios",
-      color: "bg-green-100",
-      fg: "text-green-600",
-    },
-    {
-      label: "Cuidados post-operatorios",
-      icon: HeartPulse,
-      path: "/ajustes/cuidados",
-      color: "bg-rose-100",
-      fg: "text-rose-600",
-    },
+    { ...categoryStyles.medication, label: "Medicamentos", path: "/ajustes/medicamentos" },
+    { ...categoryStyles.exercise, label: "Rutinas de ejercicio", path: "/ajustes/ejercicios" },
+    { ...categoryStyles.care, label: "Cuidados post-operatorios", path: "/ajustes/cuidados" },
+    // Neutro y no de marca: el grupo no es una categoría de recordatorio, y con color
+    // parecía una cuarta de la lista.
     {
       label: "Integrantes del grupo",
       icon: Users,
       path: "/ajustes/grupo",
-      color: "bg-indigo-100",
-      fg: "text-indigo-600",
+      soft: "bg-canvas",
+      fg: "text-subtle",
     },
   ];
 
@@ -54,46 +48,48 @@ function SettingsScreen() {
         <button
           onClick={() => navigate("/ajustes/perfil")}
           {...preloadOn("/ajustes/perfil")}
-          className="w-full bg-indigo-50 rounded-2xl p-4 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+          className="w-full bg-brand-soft rounded-2xl p-4 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
         >
-          <div className="w-12 h-12 bg-indigo-200 rounded-full flex items-center justify-center shrink-0">
-            <span className="text-indigo-700 font-bold text-lg uppercase">
+          <div className="w-12 h-12 bg-brand-gradient rounded-full flex items-center justify-center shrink-0">
+            <span className="text-white font-extrabold text-lg uppercase">
               {user ? initial(user) : ""}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-gray-900 font-semibold truncate">
+            <p className="text-ink font-bold truncate">
               {user ? fullName(user) : ""}
             </p>
-            <p className="text-gray-500 text-xs">
+            <p className="text-subtle text-xs">
               {activeTenant
                 ? `${activeTenant.name} · ${roleLabels[role ?? "viewer"]}`
                 : "Sin grupo activo"}
             </p>
           </div>
-          <span className="text-gray-300 text-lg shrink-0">›</span>
+          <span className="text-subtle text-lg shrink-0">›</span>
         </button>
       </div>
 
       {/* Selector de grupo: solo aparece si hay más de uno al que pertenecer. */}
       {memberships.length > 1 && (
         <div className="px-5 mb-5 lg:max-w-3xl lg:mx-auto lg:w-full">
-          <p className="text-gray-500 text-xs font-semibold uppercase mb-3">Grupo activo</p>
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100">
+          <p className="text-subtle text-xs font-bold uppercase tracking-wide mb-3">
+            Grupo activo
+          </p>
+          <div className="bg-white rounded-2xl shadow-card border border-line overflow-hidden divide-y divide-line">
             {memberships.map((membership) => (
               <button
                 key={membership.id}
                 onClick={() => switchTenant(membership.id)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-canvas active:bg-canvas transition-colors text-left"
               >
-                <span className="text-gray-800 font-medium text-sm flex-1 truncate">
+                <span className="text-ink font-medium text-sm flex-1 truncate">
                   {membership.name}
                 </span>
-                <span className="text-gray-400 text-xs shrink-0">
+                <span className="text-subtle text-xs shrink-0">
                   {roleLabels[membership.role]}
                 </span>
                 {membership.id === activeTenant?.id && (
-                  <span className="w-2 h-2 bg-indigo-600 rounded-full shrink-0" />
+                  <span className="w-2 h-2 bg-brand rounded-full shrink-0" />
                 )}
               </button>
             ))}
@@ -102,35 +98,38 @@ function SettingsScreen() {
       )}
 
       <div className="px-5 mb-5 lg:max-w-3xl lg:mx-auto lg:w-full">
-        <p className="text-gray-500 text-xs font-semibold uppercase mb-3">Gestión</p>
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100">
-          {items.map(({ label, icon: Icon, path, color, fg }) => (
+        <p className="text-subtle text-xs font-bold uppercase tracking-wide mb-3">
+          Gestión
+        </p>
+        <div className="bg-white rounded-2xl shadow-card border border-line overflow-hidden divide-y divide-line">
+          {items.map(({ label, icon: Icon, path, soft, fg }) => (
             <button
               key={label}
               onClick={() => navigate(path)}
               {...preloadOn(path)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+              className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-canvas active:bg-canvas transition-colors text-left"
             >
               <div
-                className={`w-9 h-9 ${color} rounded-xl flex items-center justify-center shrink-0`}
+                className={`w-9 h-9 ${soft} rounded-xl flex items-center justify-center shrink-0`}
               >
-                <Icon size={18} className={fg} />
+                <Icon size={18} className={fg} aria-hidden />
               </div>
-              <span className="text-gray-800 font-medium text-sm flex-1">{label}</span>
-              <span className="text-gray-300 text-lg">›</span>
+              <span className="text-ink font-medium text-sm flex-1">{label}</span>
+              <span className="text-subtle text-lg">›</span>
             </button>
           ))}
         </div>
       </div>
 
       <div className="px-5 lg:max-w-3xl lg:mx-auto lg:w-full">
-        <button
+        <Button
+          variant="danger"
+          block
           onClick={() => setConfirmSignOut(true)}
-          className="w-full bg-red-50 text-red-600 font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform"
+          leading={<LogOut size={18} aria-hidden />}
         >
-          <LogOut size={18} />
           Cerrar sesión
-        </button>
+        </Button>
       </div>
 
       <ConfirmSheet

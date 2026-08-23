@@ -59,13 +59,13 @@ function MedicationsListScreen() {
     <div className="flex flex-col h-full overflow-y-auto pb-6">
       {finishedCount > 0 && (
         <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-          <h2 className="text-gray-800 font-bold text-base">
+          <h2 className="text-ink font-bold text-base">
             {visibleMedications.length} medicamento
             {visibleMedications.length !== 1 ? "s" : ""}
           </h2>
           <button
             onClick={() => setShowFinished((v) => !v)}
-            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            className="flex items-center gap-1 text-xs text-subtle hover:text-muted transition-colors"
           >
             {showFinished ? (
               <>
@@ -85,16 +85,16 @@ function MedicationsListScreen() {
       )}
       <div className="px-5 pt-5">
         {pets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+          <div className="flex flex-col items-center justify-center py-20 text-subtle">
             <Dog size={64} strokeWidth={1.5} />
-            <p className="mt-4 text-base text-gray-500 text-center">
+            <p className="mt-4 text-base text-subtle text-center">
               Primero agrega una mascota
             </p>
           </div>
         ) : medications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+          <div className="flex flex-col items-center justify-center py-20 text-subtle">
             <Pill size={64} strokeWidth={1.5} />
-            <p className="mt-4 text-base text-gray-500 text-center">
+            <p className="mt-4 text-base text-subtle text-center">
               No hay medicamentos registrados
             </p>
           </div>
@@ -104,8 +104,8 @@ function MedicationsListScreen() {
               meds.length === 0 ? null : (
                 <div key={pet.id}>
                   <div className="flex items-center gap-2 mb-3">
-                    <Dog size={22} className="text-gray-800" />
-                    <span className="text-gray-900 text-lg font-bold">
+                    <Dog size={22} className="text-ink" />
+                    <span className="text-ink text-lg font-bold">
                       {pet.name}
                     </span>
                   </div>
@@ -120,17 +120,17 @@ function MedicationsListScreen() {
                       return (
                         <div
                           key={med.id}
-                          className={`bg-white rounded-2xl p-4 shadow-sm ${!med.is_active || isExpired ? "opacity-60" : ""}`}
+                          className={`bg-white rounded-2xl p-4 shadow-card ${!med.is_active || isExpired ? "opacity-60" : ""}`}
                         >
                           <div className="flex gap-3">
-                            <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center shrink-0">
-                              <Pill size={22} className="text-pink-600" />
+                            <div className="w-12 h-12 bg-med-soft rounded-xl flex items-center justify-center shrink-0">
+                              <Pill size={22} className="text-med" aria-hidden />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-gray-900 text-base font-bold mb-0.5">
+                              <p className="text-ink text-base font-bold mb-0.5">
                                 {med.name}
                               </p>
-                              <p className="text-gray-700 text-sm mb-1">
+                              <p className="text-muted text-sm mb-1">
                                 {med.dosage}
                               </p>
                               {med.schedule_type === "hours" &&
@@ -138,9 +138,9 @@ function MedicationsListScreen() {
                                   <div className="flex items-center gap-1 mb-1">
                                     <Clock
                                       size={13}
-                                      className="text-gray-500"
+                                      className="text-subtle"
                                     />
-                                    <span className="text-gray-600 text-xs">
+                                    <span className="text-muted text-xs">
                                       Cada {med.frequency_hours}h ·{" "}
                                       {med.scheduled_times.length}x al día
                                     </span>
@@ -148,15 +148,15 @@ function MedicationsListScreen() {
                                 )}
                               {med.scheduled_times.length > 0 && (
                                 <div className="flex items-center gap-1 mb-1">
-                                  <Clock size={13} className="text-blue-500" />
-                                  <span className="text-blue-600 text-xs">
+                                  <Clock size={13} className="text-subtle" />
+                                  <span className="text-subtle text-xs">
                                     {med.scheduled_times.map(shortTime).join(", ")}
                                   </span>
                                 </div>
                               )}
                               <div className="flex items-center gap-1 mb-1">
-                                <Calendar size={13} className="text-gray-500" />
-                                <span className="text-gray-600 text-xs">
+                                <Calendar size={13} className="text-subtle" />
+                                <span className="text-muted text-xs">
                                   {formatShortDate(med.start_date)}{" "}
                                   {isContinuous || !med.end_date
                                     ? "· Continuo"
@@ -168,16 +168,16 @@ function MedicationsListScreen() {
                                   {isEndingSoon ? (
                                     <AlertTriangle
                                       size={13}
-                                      className="text-orange-500"
+                                      className="text-warning"
                                     />
                                   ) : (
                                     <CheckCircle
                                       size={13}
-                                      className="text-green-600"
+                                      className="text-success"
                                     />
                                   )}
                                   <span
-                                    className={`text-xs font-semibold ${isEndingSoon ? "text-orange-600" : "text-green-600"}`}
+                                    className={`text-xs font-semibold ${isEndingSoon ? "text-warning" : "text-success"}`}
                                   >
                                     {days === 0
                                       ? "Último día"
@@ -191,17 +191,17 @@ function MedicationsListScreen() {
                                 <div className="flex items-center gap-1">
                                   <InfinityIcon
                                     size={13}
-                                    className="text-blue-600"
+                                    className="text-subtle"
                                   />
-                                  <span className="text-blue-600 text-xs font-semibold">
+                                  <span className="text-subtle text-xs font-semibold">
                                     Tratamiento continuo
                                   </span>
                                 </div>
                               )}
                               {isExpired && (
                                 <div className="flex items-center gap-1">
-                                  <X size={13} className="text-red-600" />
-                                  <span className="text-red-600 text-xs font-semibold">
+                                  <X size={13} className="text-danger" />
+                                  <span className="text-danger text-xs font-semibold">
                                     Tratamiento finalizado
                                   </span>
                                 </div>
@@ -211,9 +211,9 @@ function MedicationsListScreen() {
                                   <div className="flex items-center gap-1 mt-1">
                                     <Bell
                                       size={13}
-                                      className="text-purple-600"
+                                      className="text-subtle"
                                     />
-                                    <span className="text-purple-600 text-xs">
+                                    <span className="text-subtle text-xs">
                                       {med.notification_time}
                                     </span>
                                   </div>
@@ -223,30 +223,30 @@ function MedicationsListScreen() {
                               <div className="flex flex-col gap-2 shrink-0">
                                 <button
                                   onClick={() => navigate(`/ajustes/medicamentos/${med.id}`)}
-                                  className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
+                                  className="w-9 h-9 bg-brand-soft rounded-xl flex items-center justify-center active:scale-90 transition-transform"
                                 >
-                                  <Pencil size={15} className="text-indigo-600" />
+                                  <Pencil size={15} className="text-brand" />
                                 </button>
                                 <button
                                   onClick={() =>
                                     handleDelete(med.id, pet.name, med.name)
                                   }
-                                  className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
+                                  className="w-9 h-9 bg-danger-soft rounded-xl flex items-center justify-center active:scale-90 transition-transform"
                                 >
-                                  <Trash2 size={15} className="text-red-600" />
+                                  <Trash2 size={15} className="text-danger" />
                                 </button>
                               </div>
                             )}
                           </div>
                           {/* Toggle activo */}
-                          <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                            <span className="text-gray-600 text-sm">
+                          <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
+                            <span className="text-muted text-sm">
                               Activo
                             </span>
                             <button
                               onClick={() => update.mutate({ id: med.id, data: { ...med, is_active: !med.is_active } })}
                               disabled={!canWrite}
-                              className={`w-11 h-6 rounded-full transition-colors disabled:opacity-60 ${med.is_active ? "bg-green-500" : "bg-gray-300"}`}
+                              className={`w-11 h-6 rounded-full transition-colors disabled:opacity-60 ${med.is_active ? "bg-success" : "bg-subtle/40"}`}
                             >
                               <div
                                 className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${med.is_active ? "translate-x-5" : "translate-x-0"}`}

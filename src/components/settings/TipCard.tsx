@@ -26,10 +26,10 @@ function TipCard() {
         className={`absolute inset-0 translate-x-2 translate-y-2 rotate-2 rounded-3xl ${back} opacity-60`}
       />
 
-      <div className="relative bg-white rounded-3xl p-5 shadow-sm">
+      <div className="relative bg-white rounded-3xl p-5 shadow-card">
         <p className={`text-xs font-bold uppercase tracking-wide ${fg}`}>{label}</p>
-        <p className="text-gray-900 font-bold mt-0.5">{tip.title}</p>
-        <p className="text-gray-600 text-sm mt-1 leading-relaxed">{tip.content}</p>
+        <p className="text-ink font-bold mt-0.5">{tip.title}</p>
+        <p className="text-muted text-sm mt-1 leading-relaxed">{tip.content}</p>
       </div>
     </div>
   );
