@@ -113,20 +113,44 @@ export function usePets() {
 }
 
 /**
- * Registra un pesaje.
+ * El historial de pesajes de una mascota.
  *
- * Vive aparte de `usePets` porque no es un CRUD de mascotas: escribe en otra tabla, pero
- * invalida la misma clave, ya que el último peso viaja dentro de cada mascota.
+ * Vive aparte de `usePets` porque es otra tabla y otra petición, pero cada escritura
+ * invalida además la lista de mascotas: el último pesaje viaja dentro de cada una y es
+ * lo que se ve en la tarjeta.
+ *
+ * `petId` va en la mutación y no solo en el hook porque al crear una mascota todavía no
+ * hay id cuando se monta el formulario: llega recién con la respuesta del POST.
  */
-export function useRecordWeight() {
+export function usePetWeights(petId: string | undefined) {
   const queryClient = useQueryClient();
-  const key = useScopedKey("pets");
+  const petsKey = useScopedKey("pets");
+  const key = [...petsKey, "weights", petId ?? "none"] as const;
 
-  return useMutation({
-    mutationFn: ({ petId, weight, on }: { petId: string; weight: string; on: string }) =>
-      apiClient.pets.recordWeight(petId, weight, on),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: key }),
+  const query = useQuery({
+    queryKey: key,
+    queryFn: () => apiClient.pets.weights(petId!),
+    enabled: Boolean(petId),
   });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: key });
+    queryClient.invalidateQueries({ queryKey: petsKey });
+  };
+
+  return {
+    items: query.data ?? [],
+    isLoading: query.isLoading,
+    record: useMutation({
+      mutationFn: ({ petId: target, weight, on }: { petId: string; weight: string; on: string }) =>
+        apiClient.pets.recordWeight(target, weight, on),
+      onSuccess: invalidate,
+    }),
+    remove: useMutation({
+      mutationFn: (weightId: string) => apiClient.pets.removeWeight(petId!, weightId),
+      onSuccess: invalidate,
+    }),
+  };
 }
 
 /**

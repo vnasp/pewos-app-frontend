@@ -1,17 +1,22 @@
-import { ArchiveRestore, ArrowLeft, Camera, Heart, Trash2 } from "lucide-react";
+import { ArchiveRestore, Camera, Heart, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
 import * as apiClient from "../../api";
-import { usePets, useRecordWeight } from "../../hooks/queries";
-import type { Pet } from "../../types";
 import ArchivePetSheet from "../../components/pets/ArchivePetSheet";
 import PetPhoto from "../../components/pets/PetPhoto";
+import WeightHistory from "../../components/pets/WeightHistory";
 import Button from "../../components/ui/Button";
 import ConfirmSheet from "../../components/ui/ConfirmSheet";
-import { useAuth } from "../../context/AuthContext";
+import ErrorText from "../../components/ui/ErrorText";
+import { Field, FieldGroup } from "../../components/ui/Field";
+import FormScreen from "../../components/ui/FormScreen";
+import { Input } from "../../components/ui/Input";
 import { archiveReasonSummary } from "../../constants/labels";
-import { formatLongDate, formatShortDate, today } from "../../utils/date";
+import { useAuth } from "../../context/AuthContext";
+import { usePets, usePetWeights } from "../../hooks/queries";
+import type { Pet } from "../../types";
+import { formatLongDate, today } from "../../utils/date";
 import { preparePhoto } from "../../utils/image";
 
 function AddEditPetScreen() {
@@ -21,7 +26,6 @@ function AddEditPetScreen() {
   // compartido no tiene historial atrás y retroceder lo sacaría de la app.
   const goBack = () => navigate("/mascotas");
   const { create, update, remove, archive, unarchive, byId } = usePets();
-  const recordWeight = useRecordWeight();
   const { canWrite } = useAuth();
   // Si la mascota se creó pero la foto falló, seguimos en el formulario con su id a
   // mano: sin esto, volver a guardar crearía una segunda mascota idéntica.
@@ -29,6 +33,7 @@ function AddEditPetScreen() {
   const editingId = petId ?? savedId;
   const isEditing = !!editingId;
   const existing = byId(petId);
+  const weights = usePetWeights(editingId ?? undefined);
 
   const [name, setName] = useState(existing?.name ?? "");
   const [breed, setBreed] = useState(existing?.breed ?? "");
@@ -144,7 +149,7 @@ function AddEditPetScreen() {
         // Solo si cambió: reguardar el formulario sin tocar el peso no debe registrar
         // un pesaje de hoy repitiendo el número del mes pasado.
         if (weight.trim() && weight.trim() !== existing?.weight_kg) {
-          await recordWeight.mutateAsync({
+          await weights.record.mutateAsync({
             petId: saved.id,
             weight: weight.trim(),
             // La fecha del navegador, no la del servidor, que corre en UTC.
@@ -173,191 +178,168 @@ function AddEditPetScreen() {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto pb-6">
-      <div className="px-5 pt-5 pb-3 flex items-center gap-2 lg:max-w-2xl lg:mx-auto lg:w-full">
+    <FormScreen title={isEditing ? "Editar mascota" : "Agregar mascota"} onBack={goBack}>
+      <div className="flex flex-col items-center py-2">
         <button
-          onClick={goBack}
-          className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform shrink-0"
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={preparing}
+          className="active:scale-95 transition-transform disabled:opacity-60"
         >
-          <ArrowLeft size={18} className="text-gray-800" />
+          <div className="w-28 h-28 bg-canvas rounded-full overflow-hidden flex items-center justify-center">
+            <PetPhoto
+              url={preview}
+              alt={name || "foto"}
+              fallback={<Camera size={36} className="text-subtle" />}
+            />
+          </div>
+          <p className="text-brand text-sm font-bold text-center mt-2">
+            {preparing ? "Procesando..." : preview ? "Cambiar foto" : "Agregar foto"}
+          </p>
         </button>
-        <h2 className="text-gray-900 font-bold text-lg">
-          {isEditing ? "Editar mascota" : "Agregar mascota"}
-        </h2>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handlePickImage}
+          className="hidden"
+        />
       </div>
 
-      <div className="px-5 flex flex-col gap-4 lg:max-w-2xl lg:mx-auto lg:w-full">
-        <div className="flex flex-col items-center py-2">
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={preparing}
-            className="active:scale-95 transition-transform disabled:opacity-60"
-          >
-            <div className="w-28 h-28 bg-gray-200 rounded-full overflow-hidden flex items-center justify-center">
-              <PetPhoto
-                url={preview}
-                alt={name || "foto"}
-                fallback={<Camera size={36} className="text-gray-400" />}
-              />
+      <Field label="Nombre" required>
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Ej: Max, Luna..."
+        />
+      </Field>
+
+      <Field label="Raza">
+        <Input
+          value={breed ?? ""}
+          onChange={(e) => setBreed(e.target.value)}
+          placeholder="Ej: Labrador, Mestizo..."
+        />
+      </Field>
+
+      <Field label="Fecha de nacimiento">
+        <Input
+          type="date"
+          value={birthDate ?? ""}
+          onChange={(e) => setBirthDate(e.target.value)}
+        />
+      </Field>
+
+      <Field
+        label="Peso actual (kg)"
+        hint="Se guarda con la fecha de hoy y queda en el historial."
+      >
+        <Input
+          type="number"
+          inputMode="decimal"
+          step="0.01"
+          min="0"
+          value={weight}
+          onChange={(e) => setWeight(e.target.value)}
+          placeholder="Ej: 8,4"
+        />
+      </Field>
+
+      {isEditing && (
+        <WeightHistory
+          entries={weights.items}
+          onDelete={(weightId) => weights.remove.mutate(weightId)}
+          canWrite={canWrite}
+        />
+      )}
+
+      <FieldGroup label="Género">
+        <div className="flex gap-2">
+          {(["male", "female"] as const).map((g) => (
+            <div key={g} className="flex-1">
+              <Button
+                variant="secondary"
+                selected={gender === g}
+                onClick={() => setGender(g)}
+                block
+              >
+                {g === "male" ? "Macho" : "Hembra"}
+              </Button>
             </div>
-            <p className="text-indigo-600 text-sm font-semibold text-center mt-2">
-              {preparing ? "Procesando..." : preview ? "Cambiar foto" : "Agregar foto"}
-            </p>
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handlePickImage}
-            className="hidden"
-          />
+          ))}
         </div>
+      </FieldGroup>
 
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-1">Nombre *</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ej: Max, Luna..."
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-        </div>
-
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-1">Raza</label>
-          <input
-            value={breed ?? ""}
-            onChange={(e) => setBreed(e.target.value)}
-            placeholder="Ej: Labrador, Mestizo..."
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-        </div>
-
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-1">
-            Fecha de nacimiento
-          </label>
-          <input
-            type="date"
-            value={birthDate ?? ""}
-            onChange={(e) => setBirthDate(e.target.value)}
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-        </div>
-
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-1">
-            Peso actual (kg)
-          </label>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            min="0"
-            value={weight}
-            onChange={(e) => setWeight(e.target.value)}
-            placeholder="Ej: 8,4"
-            className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-          <p className="text-gray-500 text-xs mt-1">
-            {existing?.weight_recorded_on
-              ? `Último registro: ${formatShortDate(existing.weight_recorded_on)}`
-              : "Se guarda con la fecha de hoy y queda en el historial."}
-          </p>
-        </div>
-
-        <div>
-          <label className="text-gray-700 font-semibold text-sm block mb-2">Género</label>
-          <div className="flex gap-2">
-            {(["male", "female"] as const).map((g) => (
-              <div key={g} className="flex-1">
-                <Button
-                  variant="secondary"
-                  selected={gender === g}
-                  onClick={() => setGender(g)}
-                  block
-                >
-                  {g === "male" ? "Macho" : "Hembra"}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between bg-white rounded-xl border border-gray-200 px-4 py-3">
-          <span className="text-gray-700 font-semibold text-sm">
-            {gender === "male" ? "Castrado" : "Esterilizada"}
-          </span>
-          <button
-            onClick={() => setNeutered(!neutered)}
-            className={`w-11 h-6 rounded-full transition-colors ${neutered ? "bg-green-500" : "bg-gray-300"}`}
-          >
-            <div
-              className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${neutered ? "translate-x-5" : "translate-x-0"}`}
-            />
-          </button>
-        </div>
-
-        {error && (
-          <p className="text-red-600 text-sm bg-red-50 rounded-xl px-3 py-2">{error}</p>
-        )}
-
+      <div className="flex items-center justify-between bg-white rounded-2xl border border-line px-4 py-3">
+        <span className="text-muted font-bold text-sm">
+          {gender === "male" ? "Castrado" : "Esterilizada"}
+        </span>
         <button
-          onClick={handleSave}
-          disabled={saving || preparing}
-          className="w-full bg-indigo-600 text-white font-bold py-4 rounded-xl text-base disabled:opacity-60 active:scale-95 transition-transform mt-2"
+          type="button"
+          onClick={() => setNeutered(!neutered)}
+          role="switch"
+          aria-checked={neutered}
+          className={`w-11 h-6 rounded-full transition-colors ${neutered ? "bg-success" : "bg-subtle/40"}`}
         >
-          {saving ? "Guardando..." : isEditing ? "Guardar cambios" : "Agregar mascota"}
+          <div
+            className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${neutered ? "translate-x-5" : "translate-x-0"}`}
+          />
         </button>
+      </div>
 
-        {/* Solo al editar, y separado por una línea: ni archivar ni borrar son
-            alternativas a guardar, y en la lista el rojo estaba a un toque de distancia. */}
-        {isEditing && canWrite && (
-          <div className="border-t border-gray-200 pt-5 mt-3 flex flex-col gap-3">
-            {existing?.archived_on ? (
-              <>
-                <p className="text-sm text-muted font-medium text-center">
-                  {existing.archived_reason &&
-                    `${archiveReasonSummary[existing.archived_reason]} ${formatLongDate(existing.archived_on)}.`}
-                </p>
-                <Button
-                  variant="secondary"
-                  block
-                  onClick={() => unarchive.mutate(existing.id)}
-                  leading={<ArchiveRestore size={16} aria-hidden />}
-                >
-                  Volver a activarla
-                </Button>
-                <p className="text-xs text-subtle text-center -mt-1">
-                  Sus medicamentos y rutinas quedaron desactivados; tendrás que
-                  encenderlos de nuevo.
-                </p>
-              </>
-            ) : (
+      <ErrorText>{error}</ErrorText>
+
+      <Button block onClick={handleSave} disabled={saving || preparing}>
+        {saving ? "Guardando..." : isEditing ? "Guardar cambios" : "Agregar mascota"}
+      </Button>
+
+      {/* Solo al editar, y separado por una línea: ni archivar ni borrar son
+          alternativas a guardar, y en la lista el rojo estaba a un toque de distancia. */}
+      {isEditing && canWrite && (
+        <div className="border-t border-line pt-5 mt-3 flex flex-col gap-3">
+          {existing?.archived_on ? (
+            <>
+              <p className="text-sm text-muted font-medium text-center">
+                {existing.archived_reason &&
+                  `${archiveReasonSummary[existing.archived_reason]} ${formatLongDate(existing.archived_on)}.`}
+              </p>
               <Button
                 variant="secondary"
                 block
-                onClick={() => setArchiving(true)}
-                leading={<Heart size={16} aria-hidden />}
+                onClick={() => unarchive.mutate(existing.id)}
+                leading={<ArchiveRestore size={16} aria-hidden />}
               >
-                Ya no está conmigo
+                Volver a activarla
               </Button>
-            )}
-
+              <p className="text-xs text-subtle text-center -mt-1">
+                Sus medicamentos y rutinas quedaron desactivados; tendrás que
+                encenderlos de nuevo.
+              </p>
+            </>
+          ) : (
             <Button
-              variant="danger"
+              variant="secondary"
               block
-              onClick={() => setConfirmDelete(true)}
-              leading={<Trash2 size={16} aria-hidden />}
+              onClick={() => setArchiving(true)}
+              leading={<Heart size={16} aria-hidden />}
             >
-              Eliminar mascota
+              Ya no está conmigo
             </Button>
-            <p className="text-xs text-subtle text-center -mt-1">
-              Eliminar borra su historial completo. Si se despidió de ti, archívala.
-            </p>
-          </div>
-        )}
-      </div>
+          )}
+
+          <Button
+            variant="danger"
+            block
+            onClick={() => setConfirmDelete(true)}
+            leading={<Trash2 size={16} aria-hidden />}
+          >
+            Eliminar mascota
+          </Button>
+          <p className="text-xs text-subtle text-center -mt-1">
+            Eliminar borra su historial completo. Si se despidió de ti, archívala.
+          </p>
+        </div>
+      )}
 
       <ArchivePetSheet
         open={archiving}
@@ -381,7 +363,7 @@ function AddEditPetScreen() {
         confirmLabel="Eliminar para siempre"
         requireText={name.trim() || undefined}
       />
-    </div>
+    </FormScreen>
   );
 }
 
