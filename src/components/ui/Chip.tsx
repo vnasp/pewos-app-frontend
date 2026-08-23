@@ -11,7 +11,7 @@ interface ChipProps {
   leading?: ReactNode;
 }
 
-export default function Chip({
+function Chip({
   children,
   active = false,
   count,
@@ -56,3 +56,5 @@ export default function Chip({
     </button>
   );
 }
+
+export default Chip;

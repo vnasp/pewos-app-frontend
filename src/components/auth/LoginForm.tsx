@@ -10,7 +10,7 @@ type Mode = "login" | "register";
 const inputClass =
   "w-full bg-canvas border border-line rounded-tile px-4 py-3.5 text-ink text-base outline-none transition-colors focus:border-brand focus:bg-white focus:ring-3 focus:ring-brand/15 placeholder:text-subtle";
 
-export default function LoginForm() {
+function LoginForm() {
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -147,3 +147,5 @@ export default function LoginForm() {
     </>
   );
 }
+
+export default LoginForm;

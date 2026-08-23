@@ -12,7 +12,7 @@ interface FabProps {
  * `bottom-5` ya lo deja justo encima de la barra. Quien tiene que reservar espacio es la
  * lista, con su `padding-bottom`, o el FAB taparía la última tarjeta.
  */
-export default function Fab({ onClick, label }: FabProps) {
+function Fab({ onClick, label }: FabProps) {
   return (
     <button
       type="button"
@@ -24,3 +24,5 @@ export default function Fab({ onClick, label }: FabProps) {
     </button>
   );
 }
+
+export default Fab;

@@ -8,7 +8,7 @@ interface EmptyStateProps {
   tone?: "neutral" | "success";
 }
 
-export default function EmptyState({
+function EmptyState({
   icon: Icon,
   title,
   description,
@@ -26,3 +26,5 @@ export default function EmptyState({
     </div>
   );
 }
+
+export default EmptyState;

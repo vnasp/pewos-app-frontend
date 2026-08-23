@@ -1,0 +1,363 @@
+import { useState, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router";
+import type { Appointment } from "../../types";
+import {
+  Calendar,
+  Dog,
+  List,
+  CalendarDays,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
+import CalendarMonthView from "../../components/calendar/CalendarMonthView";
+import AppointmentCard from "../../components/calendar/AppointmentCard";
+import Button from "../../components/ui/Button";
+import ConfirmSheet from "../../components/ui/ConfirmSheet";
+import { useAppointments, usePets } from "../../hooks/queries";
+import { formatLocalDate, parseLocalDate, shortTime } from "../../utils/date";
+
+type Filter = "upcoming" | "past" | "all";
+type ViewMode = "list" | "calendar";
+
+function dateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Extrae el ID base de una ocurrencia virtual (p.ej. "abc__2026-03-06" → "abc") */
+function baseId(id: string): string {
+  return id.includes("__") ? id.split("__")[0] : id;
+}
+
+/**
+ * Expande las citas recurrentes en ocurrencias individuales dentro del rango
+ * [rangeStart, rangeEnd]. Las ocurrencias virtuales tienen id = "<baseId>__<YYYY-MM-DD>".
+ */
+function expandAppointments(
+  baseAppointments: Appointment[],
+  rangeStart: Date,
+  rangeEnd: Date,
+): Appointment[] {
+  const result: Appointment[] = [];
+  for (const apt of baseAppointments) {
+    if (!apt.recurrence_pattern || apt.recurrence_pattern === "none") {
+      result.push(apt);
+      continue;
+    }
+    const effectiveEnd = apt.recurrence_end_date
+      ? new Date(
+          Math.min(parseLocalDate(apt.recurrence_end_date).getTime(), rangeEnd.getTime()),
+        )
+      : rangeEnd;
+
+    const current = parseLocalDate(apt.date);
+    current.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 1000; i++) {
+      if (current > effectiveEnd) break;
+      const occDate = new Date(current);
+      if (occDate >= rangeStart) {
+        result.push({
+          ...apt,
+          date: formatLocalDate(occDate),
+          id: i === 0 ? apt.id : `${apt.id}__${dateKey(occDate)}`,
+        });
+      }
+      if (apt.recurrence_pattern === "daily") {
+        current.setDate(current.getDate() + 1);
+      } else if (apt.recurrence_pattern === "weekly") {
+        current.setDate(current.getDate() + 7);
+      } else if (apt.recurrence_pattern === "biweekly") {
+        current.setDate(current.getDate() + 14);
+      } else if (apt.recurrence_pattern === "monthly") {
+        current.setMonth(current.getMonth() + 1);
+      } else {
+        break;
+      }
+    }
+  }
+  return result;
+}
+
+function CalendarListScreen() {
+  const navigate = useNavigate();
+  const { items: appointments, remove } = useAppointments();
+  const { items: pets } = usePets();
+
+  // Expande las recurrencias en un rango de ±6/+12 meses
+  const expandedAppointments = useMemo(() => {
+    const rangeStart = new Date();
+    rangeStart.setMonth(rangeStart.getMonth() - 6);
+    rangeStart.setHours(0, 0, 0, 0);
+    const rangeEnd = new Date();
+    rangeEnd.setMonth(rangeEnd.getMonth() + 12);
+    rangeEnd.setHours(23, 59, 59, 999);
+    return expandAppointments(appointments, rangeStart, rangeEnd);
+  }, [appointments]);
+
+  const [filter, setFilter] = useState<Filter>("upcoming");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+
+  // Mes actual como clave (YYYY-MM) → expandido por defecto
+  const currentMonthKey = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }, []);
+  const [openMonths, setOpenMonths] = useState<Set<string>>(
+    () => new Set([currentMonthKey]),
+  );
+  const toggleMonth = useCallback((key: string) => {
+    setOpenMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  const [selectedCalDate, setSelectedCalDate] = useState<Date | null>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
+  const selectedDayAppointments = useMemo(() => {
+    if (!selectedCalDate) return [];
+    return [...expandedAppointments]
+      .filter((a) => a.date === formatLocalDate(selectedCalDate))
+      .sort((a, b) => shortTime(a.time).localeCompare(shortTime(b.time)));
+  }, [expandedAppointments, selectedCalDate]);
+
+  // Agrupación por mes para la vista "próximas"
+  const [toDelete, setToDelete] = useState<string | null>(null);
+  const handleDelete = (id: string) => setToDelete(id);
+
+  const filtered = (() => {
+    const todayStr = formatLocalDate(new Date());
+    const sorted = [...expandedAppointments].sort((a, b) =>
+      a.date.localeCompare(b.date),
+    );
+    if (filter === "upcoming") return sorted.filter((a) => a.date >= todayStr);
+    if (filter === "past")
+      return sorted.filter((a) => a.date < todayStr).reverse();
+    return sorted;
+  })();
+
+  const groupedUpcoming = useMemo(() => {
+    if (filter !== "upcoming") return [];
+    const groups: { key: string; label: string; items: typeof filtered }[] = [];
+    filtered.forEach((apt) => {
+      const d = parseLocalDate(apt.date);
+      const key = apt.date.slice(0, 7);
+      const label = d
+        .toLocaleDateString("es-ES", { month: "long", year: "numeric" })
+        .replace(/^\w/, (c) => c.toUpperCase());
+      const last = groups[groups.length - 1];
+      if (last?.key === key) {
+        last.items.push(apt);
+      } else {
+        groups.push({ key, label, items: [apt] });
+      }
+    });
+    return groups;
+  }, [filter, filtered]);
+
+  const filterBtns: { key: Filter; label: string }[] = [
+    { key: "upcoming", label: "Próximas" },
+    { key: "past", label: "Pasadas" },
+    { key: "all", label: "Todas" },
+  ];
+
+  return (
+    <div className="flex flex-col h-full overflow-y-auto pb-6">
+      {/* Toggle de vista */}
+      <div className="px-5 pt-5 pb-3 flex gap-2">
+        <div className="flex-1">
+          <Button
+            size="sm"
+            variant="secondary"
+            selected={viewMode === "list"}
+            onClick={() => setViewMode("list")}
+            leading={<List size={16} aria-hidden />}
+            block
+          >
+            Lista
+          </Button>
+        </div>
+        <div className="flex-1">
+          <Button
+            size="sm"
+            variant="secondary"
+            selected={viewMode === "calendar"}
+            onClick={() => setViewMode("calendar")}
+            leading={<CalendarDays size={16} aria-hidden />}
+            block
+          >
+            Calendario
+          </Button>
+        </div>
+      </div>
+
+      {/* Vista Calendario */}
+      {viewMode === "calendar" && (
+        <div className="flex flex-col gap-4">
+          <CalendarMonthView
+            appointments={expandedAppointments}
+            selectedDate={selectedCalDate}
+            onDaySelect={setSelectedCalDate}
+          />
+
+          {/* Citas del día seleccionado */}
+          <div className="px-5">
+            <h3 className="text-muted font-bold text-sm mb-3">
+              {selectedCalDate
+                ? selectedCalDate
+                    .toLocaleDateString("es-ES", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                    })
+                    .replace(/^\w/, (c) => c.toUpperCase())
+                : "Selecciona un día"}
+            </h3>
+            {selectedDayAppointments.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-subtle">
+                <Calendar size={40} strokeWidth={1.5} />
+                <p className="mt-3 text-sm text-center">Sin citas este día</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 md:grid md:grid-cols-2 lg:grid-cols-3">
+                {selectedDayAppointments.map((apt) => (
+                  <AppointmentCard
+                    key={apt.id}
+                    apt={apt}
+                    onEdit={() => navigate(`/agenda/${baseId(apt.id)}`)}
+                    onDelete={() => handleDelete(baseId(apt.id))}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Vista Lista */}
+      {viewMode === "list" && (
+        <>
+          <div className="px-5 pb-3">
+            <div className="flex gap-2">
+              {filterBtns.map(({ key, label }) => (
+                <div key={key} className="flex-1">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    selected={filter === key}
+                    onClick={() => setFilter(key)}
+                    block
+                  >
+                    {label}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="px-5">
+            {pets.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-subtle">
+                <Dog size={64} strokeWidth={1.5} />
+                <p className="mt-4 text-base text-subtle text-center">
+                  Primero agrega una mascota
+                </p>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-subtle">
+                <Calendar size={64} strokeWidth={1.5} />
+                <p className="mt-4 text-base text-subtle text-center">
+                  No hay citas{" "}
+                  {filter === "upcoming"
+                    ? "próximas"
+                    : filter === "past"
+                      ? "pasadas"
+                      : ""}
+                </p>
+              </div>
+            ) : filter === "upcoming" ? (
+              <div className="flex flex-col gap-2">
+                {groupedUpcoming.map(({ key, label, items }) => {
+                  const open = openMonths.has(key);
+                  return (
+                    <div key={key}>
+                      <button
+                        onClick={() => toggleMonth(key)}
+                        className="w-full flex items-center justify-between py-2.5 px-1 mb-1"
+                      >
+                        <span className="text-brand font-bold text-sm capitalize">
+                          {label}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-brand font-semibold">
+                            {items.length} cita{items.length !== 1 ? "s" : ""}
+                          </span>
+                          {open ? (
+                            <ChevronDown
+                              size={15}
+                              className="text-brand"
+                            />
+                          ) : (
+                            <ChevronRight
+                              size={15}
+                              className="text-brand"
+                            />
+                          )}
+                        </div>
+                      </button>
+                      {open && (
+                        <div className="flex flex-col gap-3 mb-3">
+                          {items.map((apt) => (
+                            <AppointmentCard
+                              key={apt.id}
+                              apt={apt}
+                              onEdit={() => navigate(`/agenda/${baseId(apt.id)}`)}
+                              onDelete={() => handleDelete(baseId(apt.id))}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {filtered.map((apt) => (
+                  <AppointmentCard
+                    key={apt.id}
+                    apt={apt}
+                    onEdit={() => navigate(`/agenda/${baseId(apt.id)}`)}
+                    onDelete={() => handleDelete(baseId(apt.id))}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      <ConfirmSheet
+        open={toDelete !== null}
+        onClose={() => setToDelete(null)}
+        onConfirm={() => toDelete && remove.mutate(toDelete)}
+        title="¿Eliminar esta cita?"
+        description="Se borra también el registro de si se asistió. No se puede deshacer."
+        confirmLabel="Eliminar"
+      />
+    </div>
+  );
+}
+
+// ─── Tarjeta reutilizable → ver src/components/calendar/AppointmentCard.tsx ──
+
+export default CalendarListScreen;

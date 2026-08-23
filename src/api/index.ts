@@ -1,5 +1,6 @@
 import type {
   Appointment,
+  ArchiveReason,
   Care,
   Completion,
   CompletionItemType,
@@ -8,6 +9,7 @@ import type {
   MealTime,
   Medication,
   Pet,
+  PetWeight,
   Session,
   TenantMember,
   TenantRole,
@@ -19,13 +21,16 @@ export { ApiError, setSessionLostHandler } from "./client";
 
 export const auth = {
   me: () => api.get<Session>("/auth/me"),
+  updateProfile: (payload: { first_name: string; last_name: string }) =>
+    api.patch<Session>("/auth/me", payload),
   login: (email: string, password: string) =>
     api.post<Session>("/auth/login", { email, password }),
   register: (payload: {
     email: string;
     password: string;
     tenant_name?: string;
-    display_name?: string;
+    first_name?: string;
+    last_name?: string;
   }) =>
     api.post<Session>("/auth/register", {
       ...payload,
@@ -71,6 +76,14 @@ export const pets = {
       `/pets/${id}/photo-url`,
       { content_type: contentType },
     ),
+  weights: (id: string) => api.get<PetWeight[]>(`/pets/${id}/weights`),
+  recordWeight: (id: string, weight_kg: string, recorded_on: string) =>
+    api.post<PetWeight>(`/pets/${id}/weights`, { weight_kg, recorded_on }),
+  removeWeight: (id: string, weightId: string) =>
+    api.del<void>(`/pets/${id}/weights/${weightId}`),
+  archive: (id: string, reason: ArchiveReason, archived_on: string) =>
+    api.post<Pet>(`/pets/${id}/archive`, { reason, archived_on }),
+  unarchive: (id: string) => api.del<Pet>(`/pets/${id}/archive`),
 };
 
 export const appointments = resource<Appointment>("/appointments");
@@ -79,10 +92,20 @@ export const exercises = resource<Exercise>("/exercises");
 export const cares = resource<Care>("/cares");
 export const veterinarians = resource<Veterinarian>("/veterinarians");
 
-export const mealTimes = {
-  ...resource<MealTime>("/meal-times"),
-  reorder: (ids: string[]) => api.put<MealTime[]>("/meal-times/order", { ids }),
-};
+/**
+ * Los horarios cuelgan de la mascota, así que no encajan en `resource<T>`: cada llamada
+ * necesita saber de quién son.
+ */
+export const mealTimes = (petId: string) => ({
+  list: () => api.get<MealTime[]>(`/pets/${petId}/meal-times`),
+  create: (payload: Partial<MealTime>) =>
+    api.post<MealTime>(`/pets/${petId}/meal-times`, payload),
+  update: (id: string, payload: Partial<MealTime>) =>
+    api.patch<MealTime>(`/pets/${petId}/meal-times/${id}`, payload),
+  remove: (id: string) => api.del<void>(`/pets/${petId}/meal-times/${id}`),
+  reorder: (ids: string[]) =>
+    api.put<MealTime[]>(`/pets/${petId}/meal-times/order`, { ids }),
+});
 
 export const completions = {
   /** Todas las de un día en una sola consulta. */
@@ -99,9 +122,4 @@ export const completions = {
     scheduled_time?: string | null;
     completed_date: string;
   }) => api.del<void>("/completions", payload),
-};
-
-export const push = {
-  subscribe: (payload: { endpoint: string; p256dh: string; auth: string }) =>
-    api.put<void>("/push-subscriptions", payload),
 };

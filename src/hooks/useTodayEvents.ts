@@ -3,7 +3,13 @@ import { useMemo } from "react";
 import type { HomeEvent } from "../types/events";
 import { today } from "../utils/date";
 import { deriveTodayEvents } from "../utils/todayEvents";
-import { useAppointments, useCares, useExercises, useMedications } from "./queries";
+import {
+  useAppointments,
+  useCares,
+  useExercises,
+  useMedications,
+  usePets,
+} from "./queries";
 
 /**
  * Recordatorios que tocan hoy, ya ordenados por hora.
@@ -16,8 +22,14 @@ export function useTodayEvents(): { events: HomeEvent[]; isLoading: boolean } {
   const { items: medications, isLoading: loadingMedications } = useMedications();
   const { items: exercises, isLoading: loadingExercises } = useExercises();
   const { items: cares, isLoading: loadingCares } = useCares();
+  // Misma clave que ya pide `AppLayout` para el guard: no es una consulta más.
+  const { archived } = usePets();
 
   const todayStr = today();
+  const archivedPetIds = useMemo(
+    () => new Set(archived.map((pet) => pet.id)),
+    [archived],
+  );
 
   const events = useMemo(
     () =>
@@ -28,8 +40,9 @@ export function useTodayEvents(): { events: HomeEvent[]; isLoading: boolean } {
         cares,
         todayStr,
         dayOfWeek: new Date().getDay(),
+        archivedPetIds,
       }),
-    [appointments, medications, exercises, cares, todayStr],
+    [appointments, medications, exercises, cares, todayStr, archivedPetIds],
   );
 
   return {

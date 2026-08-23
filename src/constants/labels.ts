@@ -7,6 +7,7 @@
 
 import type {
   AppointmentType,
+  ArchiveReason,
   CareType,
   ExerciseType,
   NotificationTime,
@@ -24,15 +25,6 @@ export const appointmentTypeLabels: Record<AppointmentType, string> = {
   otro: "Otro",
 };
 
-export const appointmentTypeColors: Record<AppointmentType, string> = {
-  control: "bg-blue-100",
-  examenes: "bg-amber-100",
-  operacion: "bg-red-100",
-  fisioterapia: "bg-green-100",
-  vacuna: "bg-indigo-100",
-  desparasitacion: "bg-purple-100",
-  otro: "bg-gray-100",
-};
 
 export const recurrenceLabels: Record<RecurrencePattern, string> = {
   daily: "Diario",
@@ -51,14 +43,6 @@ export const exerciseTypeLabels: Record<ExerciseType, string> = {
   otro: "Otro",
 };
 
-export const exerciseTypeColors: Record<ExerciseType, string> = {
-  caminata: "bg-green-100",
-  cavaletti: "bg-blue-100",
-  balanceo: "bg-amber-100",
-  slalom: "bg-purple-100",
-  entrenamiento: "bg-indigo-100",
-  otro: "bg-gray-100",
-};
 
 export const careTypeLabels: Record<CareType, string> = {
   limpieza_herida: "Limpiar herida",
@@ -69,14 +53,6 @@ export const careTypeLabels: Record<CareType, string> = {
   otro: "Otro",
 };
 
-export const careTypeColors: Record<CareType, string> = {
-  limpieza_herida: "bg-red-100",
-  frio: "bg-blue-100",
-  calor: "bg-orange-100",
-  infrarrojo: "bg-amber-100",
-  laser: "bg-purple-100",
-  otro: "bg-gray-100",
-};
 
 export const notificationTimeLabels: Record<NotificationTime, string> = {
   none: "Sin recordatorio",
@@ -87,6 +63,16 @@ export const notificationTimeLabels: Record<NotificationTime, string> = {
   "1day": "1 día antes",
 };
 
+/**
+ * Las mismas opciones, en el orden en que se ofrecen.
+ *
+ * Los cuatro formularios repetían esta lista a mano, y con etiquetas distintas entre sí
+ * —"Sin notificación" en uno, "Sin recordatorio" en otro— para las mismas opciones.
+ */
+export const notificationOptions = (
+  ["none", "15min", "30min", "1h", "2h", "1day"] as const
+).map((value) => ({ value, label: notificationTimeLabels[value] }));
+
 export const roleLabels: Record<TenantRole, string> = {
   owner: "Administra",
   member: "Puede editar",
@@ -95,3 +81,31 @@ export const roleLabels: Record<TenantRole, string> = {
 
 /** 0=Domingo … 6=Sábado, igual que `Date.getDay()` y que `cares.days_of_week`. */
 export const weekDayLabels = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+/**
+ * La misma semana en una letra, para los selectores de días.
+ *
+ * Miércoles es X y no M: la inicial la comparte con martes, y en una fila de siete
+ * botones dos "M" seguidas no se pueden distinguir.
+ */
+export const weekDayInitials = ["D", "L", "M", "X", "J", "V", "S"];
+
+
+/** Cómo se nombra el archivado al elegirlo. */
+export const archiveReasonLabels: Record<ArchiveReason, string> = {
+  deceased: "Falleció",
+  rehomed: "Se fue a otra casa",
+  other: "Otro motivo",
+};
+
+/**
+ * Cómo se cuenta después, ya en pasado y con fecha.
+ *
+ * Es la razón de ser del enum: "archivada el 12 de agosto" sirve para una mascota que se
+ * mudó y suena mal para una que murió.
+ */
+export const archiveReasonSummary: Record<ArchiveReason, string> = {
+  deceased: "Falleció el",
+  rehomed: "Se fue a otra casa el",
+  other: "Ya no está desde el",
+};

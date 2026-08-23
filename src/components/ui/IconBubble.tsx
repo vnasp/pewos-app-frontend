@@ -13,7 +13,7 @@ const sizes = {
 };
 
 /** Círculo de color con el icono de la categoría. */
-export default function IconBubble({
+function IconBubble({
   category,
   size = "md",
   className = "",
@@ -29,3 +29,5 @@ export default function IconBubble({
     </div>
   );
 }
+
+export default IconBubble;

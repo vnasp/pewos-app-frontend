@@ -1,6 +1,7 @@
 import { PawPrint } from "lucide-react";
 
 import type { Pet } from "../../types";
+import PetPhoto from "../pets/PetPhoto";
 import Chip from "../ui/Chip";
 
 interface PetFilterTabsProps {
@@ -12,7 +13,7 @@ interface PetFilterTabsProps {
 }
 
 /** Filtro por mascota. Va sobre el degradado del header, de ahí el tono claro. */
-export default function PetFilterTabs({
+function PetFilterTabs({
   pets,
   selectedPetId,
   onSelect,
@@ -45,15 +46,12 @@ export default function PetFilterTabs({
             count={count}
             onClick={() => onSelect(pet.id)}
             leading={
-              pet.photo_url ? (
-                <img
-                  src={pet.photo_url}
-                  alt=""
-                  className="w-5 h-5 rounded-full object-cover"
-                />
-              ) : (
-                <PawPrint size={14} aria-hidden />
-              )
+              <PetPhoto
+                url={pet.photo_url}
+                alt=""
+                className="w-5 h-5 rounded-full object-cover"
+                fallback={<PawPrint size={14} aria-hidden />}
+              />
             }
           >
             {pet.name}
@@ -63,3 +61,5 @@ export default function PetFilterTabs({
     </div>
   );
 }
+
+export default PetFilterTabs;

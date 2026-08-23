@@ -7,7 +7,7 @@ interface CardProps {
   className?: string;
 }
 
-export default function Card({
+function Card({
   children,
   dimmed = false,
   className = "",
@@ -22,3 +22,5 @@ export default function Card({
     </div>
   );
 }
+
+export default Card;

@@ -19,6 +19,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string, tenantName?: string) => Promise<void>;
   signOut: () => Promise<void>;
   switchTenant: (tenantId: string) => Promise<void>;
+  updateProfile: (name: { first_name: string; last_name: string }) => Promise<void>;
   redeemInvitation: (code: string) => Promise<void>;
 }
 
@@ -79,6 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: (next) => applySession(next, true),
   });
 
+  const updateProfile = useMutation({
+    mutationFn: apiClient.auth.updateProfile,
+    // La API devuelve la sesión completa, así que se reemplaza sin pedir `/me` otra vez.
+    onSuccess: (next) => applySession(next, true),
+  });
+
   const redeemInvitation = useMutation({
     mutationFn: apiClient.tenants.redeem,
     onSuccess: (next) => applySession(next, true),
@@ -106,6 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     switchTenant: async (tenantId) => {
       await switchTenant.mutateAsync(tenantId);
+    },
+    updateProfile: async (name) => {
+      await updateProfile.mutateAsync(name);
     },
     /**
      * Canjear un código no cambia el grupo activo del lado de la API, así que la

@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Appointment } from "../../types";
-import { appointmentTypeColors } from "../../constants/labels";
 import { parseLocalDate } from "../../utils/date";
 
 interface CalendarMonthViewProps {
@@ -26,7 +25,7 @@ function startOfDay(d: Date) {
   return c;
 }
 
-export default function CalendarMonthView({
+function CalendarMonthView({
   appointments,
   selectedDate,
   onDaySelect,
@@ -71,23 +70,23 @@ export default function CalendarMonthView({
   while (cells.length % 7 !== 0) cells.push(null);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm mx-5 p-4">
+    <div className="bg-white rounded-2xl shadow-card mx-5 p-4">
       {/* Header mes */}
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={() => setCursor(new Date(year, month - 1, 1))}
-          className="w-8 h-8 flex items-center justify-center rounded-xl bg-indigo-100 active:scale-90 transition-transform"
+          className="w-8 h-8 flex items-center justify-center rounded-xl bg-brand-soft active:scale-90 transition-transform"
         >
-          <ChevronLeft size={16} className="text-indigo-700" />
+          <ChevronLeft size={16} className="text-brand" />
         </button>
-        <span className="font-bold text-gray-800 capitalize text-sm">
+        <span className="font-bold text-ink capitalize text-sm">
           {monthLabel}
         </span>
         <button
           onClick={() => setCursor(new Date(year, month + 1, 1))}
-          className="w-8 h-8 flex items-center justify-center rounded-xl bg-indigo-100 active:scale-90 transition-transform"
+          className="w-8 h-8 flex items-center justify-center rounded-xl bg-brand-soft active:scale-90 transition-transform"
         >
-          <ChevronRight size={16} className="text-indigo-700" />
+          <ChevronRight size={16} className="text-brand" />
         </button>
       </div>
 
@@ -96,7 +95,7 @@ export default function CalendarMonthView({
         {WEEKDAYS.map((d) => (
           <span
             key={d}
-            className="text-center text-xs font-semibold text-gray-400 py-1"
+            className="text-center text-xs font-semibold text-subtle py-1"
           >
             {d}
           </span>
@@ -122,10 +121,10 @@ export default function CalendarMonthView({
               onClick={() => onDaySelect(cellDate)}
               className={`flex flex-col items-center py-1 rounded-xl transition-colors ${
                 isSelected
-                  ? "bg-indigo-600"
+                  ? "bg-brand"
                   : isToday
-                    ? "bg-indigo-100"
-                    : "hover:bg-gray-100"
+                    ? "bg-brand-soft"
+                    : "hover:bg-canvas"
               }`}
             >
               <span
@@ -133,32 +132,22 @@ export default function CalendarMonthView({
                   isSelected
                     ? "text-white"
                     : isToday
-                      ? "text-indigo-700"
+                      ? "text-brand"
                       : isPast
-                        ? "text-gray-400"
-                        : "text-gray-800"
+                        ? "text-subtle"
+                        : "text-ink"
                 }`}
               >
                 {day}
               </span>
               {/* Dots de citas (max 3) */}
               <div className="flex gap-0.5 h-1.5 items-center mt-0.5">
+                {/* Todos del mismo color: el punto dice "acá hay una cita", y siete
+                    tonos según el subtipo no se distinguen a un píxel de tamaño. */}
                 {dayApts.slice(0, 3).map((a) => (
                   <span
                     key={a.id}
-                    className={`w-1 h-1 rounded-full ${
-                      isSelected
-                        ? "bg-white/70"
-                        : appointmentTypeColors[a.type]
-                            .replace("bg-", "bg-")
-                            .split(" ")[0]
-                            .replace("bg-", "bg-") || "bg-indigo-400"
-                    }`}
-                    style={
-                      !isSelected
-                        ? { backgroundColor: dotColor(a.type) }
-                        : undefined
-                    }
+                    className={`w-1 h-1 rounded-full ${isSelected ? "bg-white/70" : "bg-appointment"}`}
                   />
                 ))}
               </div>
@@ -170,15 +159,4 @@ export default function CalendarMonthView({
   );
 }
 
-function dotColor(type: string): string {
-  const map: Record<string, string> = {
-    control: "#6366f1",
-    examenes: "#8b5cf6",
-    operacion: "#ef4444",
-    fisioterapia: "#f59e0b",
-    vacuna: "#10b981",
-    desparasitacion: "#06b6d4",
-    otro: "#6b7280",
-  };
-  return map[type] ?? "#6366f1";
-}
+export default CalendarMonthView;

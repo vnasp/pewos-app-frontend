@@ -239,3 +239,51 @@ describe("deriveTodayEvents", () => {
     });
   });
 });
+
+describe("mascotas archivadas", () => {
+  const archivedPetIds = new Set(["p1"]);
+
+  test("una mascota archivada no genera ningún recordatorio", () => {
+    const events = derive({
+      appointments: [appointment()],
+      medications: [medication()],
+      exercises: [exercise()],
+      cares: [care()],
+      archivedPetIds,
+    });
+
+    expect(events).toEqual([]);
+  });
+
+  test("las citas también se van, aunque no tengan is_active con el que apagarse", () => {
+    const events = derive({ appointments: [appointment()], archivedPetIds });
+
+    expect(events).toEqual([]);
+  });
+
+  test("no se filtra por mascota una pauta reactivada a mano", () => {
+    // El filtro es por mascota y no por `is_active`: encender una medicación de una
+    // mascota archivada no puede devolverla a los recordatorios de hoy.
+    const events = derive({
+      medications: [medication({ is_active: true })],
+      archivedPetIds,
+    });
+
+    expect(events).toEqual([]);
+  });
+
+  test("las mascotas activas siguen recordando con normalidad", () => {
+    const events = derive({
+      medications: [medication(), medication({ pet_id: "p2", pet_name: "Nube" })],
+      archivedPetIds,
+    });
+
+    expect(events.map((e) => e.petName)).toEqual(["Nube"]);
+  });
+
+  test("sin archivadas, no cambia nada", () => {
+    const events = derive({ medications: [medication()], archivedPetIds: new Set() });
+
+    expect(events).toHaveLength(1);
+  });
+});

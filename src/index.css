@@ -36,6 +36,9 @@
   --color-success-soft: #e7f8ef;
   --color-danger: #dc2626;
   --color-danger-soft: #fee2e2;
+  /* Para lo que conviene mirar sin que sea un error: un tratamiento que se acaba. */
+  --color-warning: #b45309;
+  --color-warning-soft: #fef3c7;
 
   --radius-card: 1rem;
   --radius-sheet: 1.5rem;
@@ -74,6 +77,21 @@
 body {
   @apply bg-brand-dark text-ink font-sans;
   font-weight: 500;
+}
+
+/*
+ * El desplegable de hora de Chrome lo abre el icono de reloj del propio input, y ese
+ * popup lo dibuja el navegador con su azul, fuera del alcance del CSS de la página
+ * (`accent-color` tampoco lo alcanza). Sin el icono no hay desplegable: la hora se
+ * escribe por segmentos, que en teclado es más rápido de todos modos.
+ *
+ * Acotado a puntero fino porque en táctil ese mismo mecanismo es el que abre el selector
+ * del sistema —la rueda de iOS, el reloj de Android—, que ahí sí es lo que se quiere.
+ */
+@media (pointer: fine) {
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    display: none;
+  }
 }
 
 button {

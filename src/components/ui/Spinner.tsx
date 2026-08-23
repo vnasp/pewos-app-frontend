@@ -5,7 +5,7 @@ interface SpinnerProps {
   className?: string;
 }
 
-export default function Spinner({
+function Spinner({
   tone = "brand",
   size = "md",
   className = "",
@@ -24,3 +24,5 @@ export default function Spinner({
     />
   );
 }
+
+export default Spinner;

@@ -10,6 +10,7 @@ import { useAuth } from "../context/AuthContext";
 import { shortTime } from "../utils/date";
 import type {
   Appointment,
+  ArchiveReason,
   Care,
   Completion,
   CompletionItemType,
@@ -76,7 +77,96 @@ function useCrud<T extends { id: string }>(name: string, resource: CrudApi<T>): 
   };
 }
 
-export const usePets = () => useCrud<Pet>("pets", apiClient.pets);
+/**
+ * Mascotas del grupo.
+ *
+ * `items` las trae todas, porque las archivadas siguen apareciendo en su sección y hay
+ * que poder resolver su nombre en el historial. `active` es la lista que quiere casi
+ * todo lo demás: selectores, chips y el guard de "primero agrega una mascota".
+ */
+export function usePets() {
+  const queryClient = useQueryClient();
+  const key = useScopedKey("pets");
+  const crud = useCrud<Pet>("pets", apiClient.pets);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: key });
+
+  return {
+    ...crud,
+    active: crud.items.filter((pet) => pet.archived_on === null),
+    archived: crud.items.filter((pet) => pet.archived_on !== null),
+    archive: useMutation({
+      mutationFn: ({ id, reason, on }: { id: string; reason: ArchiveReason; on: string }) =>
+        apiClient.pets.archive(id, reason, on),
+      // Invalida también lo que se apagó al archivar: sus pautas quedaron inactivas.
+      onSuccess: () => {
+        invalidate();
+        for (const name of ["medications", "exercises", "cares"]) {
+          queryClient.invalidateQueries({ queryKey: [name, key[1]] });
+        }
+      },
+    }),
+    unarchive: useMutation({
+      mutationFn: (id: string) => apiClient.pets.unarchive(id),
+      onSuccess: invalidate,
+    }),
+  };
+}
+
+/**
+ * El historial de pesajes de una mascota.
+ *
+ * Vive aparte de `usePets` porque es otra tabla y otra petición, pero cada escritura
+ * invalida además la lista de mascotas: el último pesaje viaja dentro de cada una y es
+ * lo que se ve en la tarjeta.
+ *
+ * `petId` va en la mutación y no solo en el hook porque al crear una mascota todavía no
+ * hay id cuando se monta el formulario: llega recién con la respuesta del POST.
+ */
+export function usePetWeights(petId: string | undefined) {
+  const queryClient = useQueryClient();
+  const petsKey = useScopedKey("pets");
+  const key = [...petsKey, "weights", petId ?? "none"] as const;
+
+  const query = useQuery({
+    queryKey: key,
+    queryFn: () => apiClient.pets.weights(petId!),
+    enabled: Boolean(petId),
+  });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: key });
+    queryClient.invalidateQueries({ queryKey: petsKey });
+  };
+
+  return {
+    items: query.data ?? [],
+    isLoading: query.isLoading,
+    record: useMutation({
+      mutationFn: ({ petId: target, weight, on }: { petId: string; weight: string; on: string }) =>
+        apiClient.pets.recordWeight(target, weight, on),
+      onSuccess: invalidate,
+    }),
+    remove: useMutation({
+      mutationFn: (weightId: string) => apiClient.pets.removeWeight(petId!, weightId),
+      onSuccess: invalidate,
+    }),
+  };
+}
+
+/**
+ * Mascotas que puede elegir un formulario.
+ *
+ * Las activas, más la que ya estaba elegida aunque esté archivada: editando el
+ * medicamento de una mascota que falleció, su nombre tiene que seguir en el selector o
+ * el formulario aparecería sin mascota y guardarlo se la cambiaría a otra.
+ */
+export function usePetOptions(selectedId?: string | null): Pet[] {
+  const { active, byId } = usePets();
+  const selected = byId(selectedId ?? undefined);
+
+  return selected && selected.archived_on !== null ? [...active, selected] : active;
+}
+
 export const useAppointments = () =>
   useCrud<Appointment>("appointments", apiClient.appointments);
 export const useMedications = () =>
@@ -86,15 +176,38 @@ export const useCares = () => useCrud<Care>("cares", apiClient.cares);
 export const useVeterinarians = () =>
   useCrud<Veterinarian>("veterinarians", apiClient.veterinarians);
 
-export function useMealTimes() {
+/**
+ * Horarios de comida de una mascota.
+ *
+ * Fuera de `useCrud` porque su clave lleva la mascota además del grupo, y porque el
+ * cliente es una factoría: cada petición necesita saber de quién son los horarios.
+ */
+export function useMealTimes(petId: string | undefined) {
   const queryClient = useQueryClient();
-  const key = useScopedKey("meal-times");
-  const crud = useCrud<MealTime>("meal-times", apiClient.mealTimes);
+  const { activeTenant } = useAuth();
+  const key = [...useScopedKey("meal-times"), petId ?? "none"] as const;
+  const api = apiClient.mealTimes(petId ?? "");
+
+  const query = useQuery({
+    queryKey: key,
+    queryFn: api.list,
+    enabled: Boolean(activeTenant) && Boolean(petId),
+  });
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: key });
 
   return {
-    ...crud,
+    items: query.data ?? [],
+    isLoading: query.isLoading,
+    create: useMutation({ mutationFn: api.create, onSuccess: invalidate }),
+    update: useMutation({
+      mutationFn: ({ id, data }: { id: string; data: Partial<MealTime> }) =>
+        api.update(id, data),
+      onSuccess: invalidate,
+    }),
+    remove: useMutation({ mutationFn: api.remove, onSuccess: invalidate }),
     reorder: useMutation({
-      mutationFn: apiClient.mealTimes.reorder,
+      mutationFn: api.reorder,
       onSuccess: (ordered) => queryClient.setQueryData(key, ordered),
     }),
   };

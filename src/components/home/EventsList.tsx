@@ -42,7 +42,7 @@ function getExtraInfo(ev: HomeEvent): string | null {
   return null;
 }
 
-export default function EventsList({
+function EventsList({
   events,
   completionFor,
   showPetName,
@@ -175,3 +175,5 @@ export default function EventsList({
     </div>
   );
 }
+
+export default EventsList;
