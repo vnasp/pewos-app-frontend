@@ -11,9 +11,7 @@ permissions:
 
 concurrency:
   group: deploy-${{ github.ref }}
-  # A diferencia de CI, acá no se cancela: interrumpir un `s3 sync` a medias deja el
-  # bucket con la mitad de una versión y la mitad de la otra.
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   AWS_REGION: us-east-1
@@ -39,30 +37,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Los archivos con hash primero, y sin `--delete`.
-      #
-      # El orden importa: si `index.html` llegara antes, durante unos segundos apuntaría
-      # a un bundle que todavía no existe.
-      #
-      # Y no se borran los de la versión anterior: la app carga 16 trozos bajo demanda, y
-      # quien la tenga abierta los pedirá al navegar. Borrarlos le da un 404 en mitad de
-      # la sesión. Se limpian con una regla de ciclo de vida del bucket sobre `assets/`.
-      - name: Subir los assets
-        run: |
-          aws s3 sync dist/ "s3://${S3_BUCKET}" \
-            --exclude index.html \
-            --cache-control "public, max-age=31536000, immutable" \
-            --no-progress
-
-      # Y ahora sí el index, que es el que decide qué versión se usa. Sin caché: es el
-      # único archivo cuyo nombre no cambia, y sin cabecera el navegador le aplica su
-      # heurística y se puede quedar con la versión vieja aunque CloudFront ya no la sirva.
-      - name: Publicar el index
-        run: |
-          aws s3 cp dist/index.html "s3://${S3_BUCKET}/index.html" \
-            --cache-control "no-cache, must-revalidate" \
-            --content-type "text/html; charset=utf-8" \
-            --no-progress
+      - run: aws s3 sync dist/ "s3://${S3_BUCKET}" --delete
 
       - run: |
           aws cloudfront create-invalidation \
