@@ -1,5 +1,5 @@
 // ============================================================
-// Tipos del dominio. Coinciden 1:1 con los schemas de pewos-api.
+// Tipos del dominio. Coinciden 1:1 con los schemas del backend.
 // ============================================================
 
 export type AppointmentType =

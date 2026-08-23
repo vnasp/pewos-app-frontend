@@ -3,10 +3,10 @@
 Aplicación web responsive para gestionar la agenda de tus mascotas: medicaciones,
 ejercicios, cuidados post-operatorios, horarios de comida, citas veterinarias y calendario.
 
-Es el frontend de [`pewos-api`](../pewos-api) (FastAPI + PostgreSQL), que se encarga de la
+Es el frontend de [`pewos-app-backend`](../pewos-api) (FastAPI + PostgreSQL), que se encarga de la
 autenticación y los datos.
 
-> Proyecto personal en desarrollo. Necesita `pewos-api` corriendo para funcionar.
+> Proyecto personal en desarrollo. Necesita `pewos-app-backend` corriendo para funcionar.
 
 ## Grupos, integrantes y roles
 
@@ -85,7 +85,7 @@ npm run lint
 ## Estructura del Proyecto
 
 ```
-pewos-react-pwa/
+pewos-app-frontend/
 ├── public/assets/
 ├── src/
 │   ├── api/
@@ -104,7 +104,7 @@ pewos-react-pwa/
 │   ├── hooks/
 │   │   └── queries.ts       # useQuery/useMutation por recurso
 │   ├── pages/
-│   ├── types/index.ts       # espejo de los schemas de pewos-api
+│   ├── types/index.ts       # espejo de los schemas del backend
 │   ├── utils/
 │   │   ├── date.ts          # fechas ISO sin el corrimiento de UTC
 │   │   └── schedule.ts      # reparto de horarios en el día
