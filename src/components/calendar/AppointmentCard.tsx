@@ -7,30 +7,15 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import type { Appointment, NotificationTime } from "../../types";
+import type { Appointment } from "../../types";
 import {
-  appointmentTypeLabels,
   appointmentTypeColors,
+  appointmentTypeLabels,
+  notificationTimeLabels,
   recurrenceLabels,
-} from "../../context/CalendarContext";
-
-function formatDate(date: Date) {
-  const d = new Date(date);
-  const weekday = d.toLocaleDateString("es-ES", { weekday: "long" });
-  const day = d.getDate();
-  const month = d.toLocaleDateString("es-ES", { month: "long" });
-  const year = d.getFullYear();
-  return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} ${day} ${month.charAt(0).toUpperCase() + month.slice(1)} ${year}`;
-}
-
-export const notificationTimeLabels: Record<NotificationTime, string> = {
-  none: "Sin notificación",
-  "15min": "15 minutos antes",
-  "30min": "30 minutos antes",
-  "1h": "1 hora antes",
-  "2h": "2 horas antes",
-  "1day": "1 día antes",
-};
+} from "../../constants/labels";
+import { formatLongDate, shortTime } from "../../utils/date";
+import { useAuth } from "../../context/AuthContext";
 
 export default function AppointmentCard({
   apt,
@@ -41,6 +26,8 @@ export default function AppointmentCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { canWrite } = useAuth();
+
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm">
       <div className="flex items-start gap-3">
@@ -52,39 +39,39 @@ export default function AppointmentCard({
 
         <div className="flex-1 min-w-0">
           <p className="text-gray-900 text-base font-bold mb-1">
-            {apt.type === "otro" && apt.customTypeDescription
-              ? apt.customTypeDescription
+            {apt.type === "otro" && apt.custom_type_description
+              ? apt.custom_type_description
               : appointmentTypeLabels[apt.type]}
           </p>
           <div className="flex items-center gap-1 mb-1">
             <Dog size={13} className="text-gray-600 shrink-0" />
-            <span className="text-gray-700 text-sm">{apt.dogName}</span>
+            <span className="text-gray-700 text-sm">{apt.pet_name}</span>
           </div>
           <div className="flex items-center gap-3 flex-wrap mb-1">
             <div className="flex items-center gap-1">
               <Calendar size={13} className="text-gray-500" />
               <span className="text-gray-600 text-xs">
-                {formatDate(apt.date)}
+                {formatLongDate(apt.date)}
               </span>
             </div>
             <div className="flex items-center gap-1">
               <Clock size={13} className="text-gray-500" />
-              <span className="text-gray-600 text-xs">{apt.time}</span>
+              <span className="text-gray-600 text-xs">{shortTime(apt.time)}</span>
             </div>
           </div>
-          {apt.recurrencePattern && apt.recurrencePattern !== "none" && (
+          {apt.recurrence_pattern && apt.recurrence_pattern !== "none" && (
             <div className="flex items-center gap-1 mb-1">
               <Repeat size={13} className="text-purple-600" />
               <span className="text-purple-600 text-xs">
-                {recurrenceLabels[apt.recurrencePattern]}
+                {recurrenceLabels[apt.recurrence_pattern]}
               </span>
             </div>
           )}
-          {apt.notificationTime && apt.notificationTime !== "none" && (
+          {apt.notification_time && apt.notification_time !== "none" && (
             <div className="flex items-center gap-1 mt-1">
               <Bell size={13} className="text-blue-600" />
               <span className="text-blue-600 text-xs">
-                {notificationTimeLabels[apt.notificationTime]}
+                {notificationTimeLabels[apt.notification_time]}
               </span>
             </div>
           )}
@@ -93,20 +80,22 @@ export default function AppointmentCard({
           )}
         </div>
 
-        <div className="flex flex-col gap-2 shrink-0">
-          <button
-            onClick={onEdit}
-            className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
-          >
-            <Pencil size={15} className="text-indigo-600" />
-          </button>
-          <button
-            onClick={onDelete}
-            className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
-          >
-            <Trash2 size={15} className="text-red-600" />
-          </button>
-        </div>
+        {canWrite && (
+          <div className="flex flex-col gap-2 shrink-0">
+            <button
+              onClick={onEdit}
+              className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
+            >
+              <Pencil size={15} className="text-indigo-600" />
+            </button>
+            <button
+              onClick={onDelete}
+              className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
+            >
+              <Trash2 size={15} className="text-red-600" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

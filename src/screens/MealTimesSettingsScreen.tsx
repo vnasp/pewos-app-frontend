@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Clock, Pencil, Trash2, Plus, Save, X } from "lucide-react";
-import { useMealTimes } from "../context/MealTimesContext";
 import type { MealTime } from "../types";
+import { useMealTimes } from "../hooks/queries";
+import { shortTime } from "../utils/date";
 
 export default function MealTimesSettingsScreen() {
-  const { mealTimes, addMealTime, updateMealTime, deleteMealTime } =
-    useMealTimes();
+  const { items: mealTimes, create, update, remove } = useMealTimes();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editTime, setEditTime] = useState("");
@@ -17,7 +17,7 @@ export default function MealTimesSettingsScreen() {
   const handleEdit = (meal: MealTime) => {
     setEditingId(meal.id);
     setEditName(meal.name);
-    setEditTime(meal.time);
+    setEditTime(shortTime(meal.time));
     setError(null);
   };
 
@@ -28,10 +28,9 @@ export default function MealTimesSettingsScreen() {
     }
     const meal = mealTimes.find((m) => m.id === editingId);
     if (!meal) return;
-    await updateMealTime(editingId!, {
-      name: editName.trim(),
-      time: editTime,
-      order: meal.order,
+    await update.mutateAsync({
+      id: editingId!,
+      data: { name: editName.trim(), time: editTime },
     });
     setEditingId(null);
     setError(null);
@@ -42,11 +41,7 @@ export default function MealTimesSettingsScreen() {
       setError("El nombre no puede estar vacío");
       return;
     }
-    await addMealTime({
-      name: newName.trim(),
-      time: newTime,
-      order: mealTimes.length + 1,
-    });
+    await create.mutateAsync({ name: newName.trim(), time: newTime });
     setNewName("");
     setNewTime("12:00");
     setIsAdding(false);
@@ -58,7 +53,7 @@ export default function MealTimesSettingsScreen() {
       setError("Debe haber al menos una comida");
       return;
     }
-    if (window.confirm(`¿Eliminar "${meal.name}"?`)) deleteMealTime(meal.id);
+    if (window.confirm(`¿Eliminar "${meal.name}"?`)) remove.mutate(meal.id);
   };
 
   return (
@@ -169,7 +164,7 @@ export default function MealTimesSettingsScreen() {
                 </div>
                 <div className="flex-1">
                   <p className="text-gray-900 font-semibold">{meal.name}</p>
-                  <p className="text-gray-500 text-sm">{meal.time}</p>
+                  <p className="text-gray-500 text-sm">{shortTime(meal.time)}</p>
                 </div>
                 <div className="flex gap-2">
                   <button

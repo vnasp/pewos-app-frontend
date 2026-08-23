@@ -1,12 +1,8 @@
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { formatLocalDate, parseLocalDate } from "../utils/supabase";
-import {
-  useCalendar,
-  appointmentTypeLabels,
-  recurrenceLabels,
-} from "../context/CalendarContext";
-import { useDogs } from "../context/DogsContext";
+import { today } from "../utils/date";
+import { appointmentTypeLabels, recurrenceLabels } from "../constants/labels";
+import { useAppointments, usePets } from "../hooks/queries";
 import type {
   AppointmentType,
   RecurrencePattern,
@@ -47,46 +43,39 @@ export default function AddEditAppointmentScreen({
   appointmentId,
   onNavigateBack,
 }: AddEditAppointmentScreenProps) {
-  const { addAppointment, updateAppointment, getAppointmentById } =
-    useCalendar();
-  const { dogs } = useDogs();
+  const { create, update, byId } = useAppointments();
+  const { items: pets } = usePets();
   const isEditing = !!appointmentId;
   const existing = appointmentId
-    ? getAppointmentById(appointmentId)
+    ? byId(appointmentId)
     : undefined;
 
-  const [selectedDogId, setSelectedDogId] = useState(
-    existing?.dogId ?? dogs[0]?.id ?? "",
+  const [selectedPetId, setSelectedDogId] = useState(
+    existing?.pet_id ?? pets[0]?.id ?? "",
   );
-  const [date, setDate] = useState(
-    existing?.date
-      ? formatLocalDate(new Date(existing.date))
-      : formatLocalDate(new Date()),
-  );
+  const [date, setDate] = useState(existing?.date ?? today());
   const [time, setTime] = useState(existing?.time ?? "09:00");
   const [type, setType] = useState<AppointmentType>(
     existing?.type ?? "control",
   );
   const [customTypeDescription, setCustomTypeDescription] = useState(
-    existing?.customTypeDescription ?? "",
+    existing?.custom_type_description ?? "",
   );
   const [notes, setNotes] = useState(existing?.notes ?? "");
   const [notificationTime, setNotificationTime] = useState<NotificationTime>(
-    existing?.notificationTime ?? "1day",
+    existing?.notification_time ?? "1day",
   );
   const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern>(
-    existing?.recurrencePattern ?? "none",
+    existing?.recurrence_pattern ?? "none",
   );
   const [recurrenceEndDate, setRecurrenceEndDate] = useState(
-    existing?.recurrenceEndDate
-      ? formatLocalDate(new Date(existing.recurrenceEndDate))
-      : "",
+    existing?.recurrence_end_date ?? "",
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSave = async () => {
-    if (!selectedDogId) {
+    if (!selectedPetId) {
       setError("Selecciona una mascota");
       return;
     }
@@ -101,26 +90,24 @@ export default function AddEditAppointmentScreen({
     setError(null);
     setSaving(true);
     try {
-      const selectedDog = dogs.find((d) => d.id === selectedDogId)!;
       const data = {
-        dogId: selectedDogId,
-        dogName: selectedDog.name,
-        date: parseLocalDate(date),
+        pet_id: selectedPetId,
+        date,
         time,
         type,
-        customTypeDescription:
+        custom_type_description:
           type === "otro" ? customTypeDescription.trim() : undefined,
         notes: notes.trim(),
-        notificationTime,
-        recurrencePattern,
-        recurrenceEndDate:
+        notification_time: notificationTime,
+        recurrence_pattern: recurrencePattern,
+        recurrence_end_date:
           recurrencePattern !== "none" && recurrenceEndDate
-            ? parseLocalDate(recurrenceEndDate)
+            ? recurrenceEndDate
             : undefined,
       };
       if (isEditing && appointmentId)
-        await updateAppointment(appointmentId, data);
-      else await addAppointment(data);
+        await update.mutateAsync({ id: appointmentId, data: data });
+      else await create.mutateAsync(data);
       onNavigateBack();
     } catch {
       setError("No se pudo guardar");
@@ -150,13 +137,13 @@ export default function AddEditAppointmentScreen({
             Mascota
           </label>
           <div className="flex flex-wrap gap-2">
-            {dogs.map((dog) => (
+            {pets.map((pet) => (
               <button
-                key={dog.id}
-                onClick={() => setSelectedDogId(dog.id)}
-                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${selectedDogId === dog.id ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
+                key={pet.id}
+                onClick={() => setSelectedDogId(pet.id)}
+                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${selectedPetId === pet.id ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-700"}`}
               >
-                {dog.name}
+                {pet.name}
               </button>
             ))}
           </div>

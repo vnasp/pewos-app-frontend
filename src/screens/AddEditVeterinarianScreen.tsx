@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { useVeterinarians } from "../context/VeterinariansContext";
-import { useDogs } from "../context/DogsContext";
+import { usePets, useVeterinarians } from "../hooks/queries";
 
 interface AddEditVeterinarianScreenProps {
   veterinarianId?: string;
@@ -12,19 +11,18 @@ export default function AddEditVeterinarianScreen({
   veterinarianId,
   onNavigateBack,
 }: AddEditVeterinarianScreenProps) {
-  const { addVeterinarian, updateVeterinarian, getVeterinarianById } =
-    useVeterinarians();
-  const { dogs } = useDogs();
+  const { create, update, byId } = useVeterinarians();
+  const { items: pets } = usePets();
   const isEditing = !!veterinarianId;
   const existing = veterinarianId
-    ? getVeterinarianById(veterinarianId)
+    ? byId(veterinarianId)
     : undefined;
 
-  const [selectedDogId, setSelectedDogId] = useState(
-    existing?.dogId ?? dogs[0]?.id ?? "",
+  const [selectedPetId, setSelectedDogId] = useState(
+    existing?.pet_id ?? pets[0]?.id ?? "",
   );
   const [name, setName] = useState(existing?.name ?? "");
-  const [clinicName, setClinicName] = useState(existing?.clinicName ?? "");
+  const [clinicName, setClinicName] = useState(existing?.clinic_name ?? "");
   const [phone, setPhone] = useState(existing?.phone ?? "");
   const [email, setEmail] = useState(existing?.email ?? "");
   const [address, setAddress] = useState(existing?.address ?? "");
@@ -33,7 +31,7 @@ export default function AddEditVeterinarianScreen({
   const [error, setError] = useState<string | null>(null);
 
   const handleSave = async () => {
-    if (!selectedDogId) {
+    if (!selectedPetId) {
       setError("Selecciona una mascota");
       return;
     }
@@ -44,20 +42,18 @@ export default function AddEditVeterinarianScreen({
     setError(null);
     setSaving(true);
     try {
-      const selectedDog = dogs.find((d) => d.id === selectedDogId)!;
       const data = {
-        dogId: selectedDogId,
-        dogName: selectedDog.name,
+        pet_id: selectedPetId,
         name: name.trim(),
-        clinicName: clinicName.trim() || undefined,
+        clinic_name: clinicName.trim() || undefined,
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
         address: address.trim() || undefined,
         notes: notes.trim() || undefined,
       };
       if (isEditing && veterinarianId)
-        await updateVeterinarian(veterinarianId, data);
-      else await addVeterinarian(data);
+        await update.mutateAsync({ id: veterinarianId, data: data });
+      else await create.mutateAsync(data);
       onNavigateBack();
     } catch {
       setError("No se pudo guardar");
@@ -87,17 +83,17 @@ export default function AddEditVeterinarianScreen({
             Mascota
           </label>
           <div className="flex flex-wrap gap-2">
-            {dogs.map((dog) => (
+            {pets.map((pet) => (
               <button
-                key={dog.id}
-                onClick={() => setSelectedDogId(dog.id)}
+                key={pet.id}
+                onClick={() => setSelectedDogId(pet.id)}
                 className={`px-4 py-2 rounded-xl font-semibold text-sm transition-colors ${
-                  selectedDogId === dog.id
+                  selectedPetId === pet.id
                     ? "bg-indigo-600 text-white"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                {dog.name}
+                {pet.name}
               </button>
             ))}
           </div>

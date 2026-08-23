@@ -12,12 +12,14 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import {
-  useCare,
-  careTypeLabels,
   careTypeColors,
-} from "../context/CareContext";
-import { notificationTimeLabels } from "../components/calendar/AppointmentCard";
-import { useDogs } from "../context/DogsContext";
+  careTypeLabels,
+  notificationTimeLabels,
+  weekDayLabels,
+} from "../constants/labels";
+import { daysUntil, shortTime } from "../utils/date";
+import { useCares, usePets } from "../hooks/queries";
+import { useAuth } from "../context/AuthContext";
 
 interface CaresListScreenProps {
   onNavigateToAddEdit: (careId?: string) => void;
@@ -26,39 +28,25 @@ interface CaresListScreenProps {
 export default function CaresListScreen({
   onNavigateToAddEdit,
 }: CaresListScreenProps) {
-  const { cares, deleteCare, toggleCareActive } = useCare();
-  const { dogs } = useDogs();
+  const { canWrite } = useAuth();
+  const { items: cares, remove, update } = useCares();
+  const { items: pets } = usePets();
   const [showFinished, setShowFinished] = useState(false);
 
-  const handleDelete = (id: string, dogName: string) => {
-    if (window.confirm(`¿Eliminar este cuidado de ${dogName}?`)) deleteCare(id);
+  const handleDelete = (id: string, petName: string) => {
+    if (window.confirm(`¿Eliminar este cuidado de ${petName}?`)) remove.mutate(id);
   };
 
-  const finishedCount = cares.filter((c) => {
-    if (c.isPermanent) return false;
-    if (!c.endDate) return false;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const end = new Date(c.endDate);
-    end.setHours(0, 0, 0, 0);
-    return end.getTime() < today.getTime();
-  }).length;
+  const isFinished = (c: (typeof cares)[number]) =>
+    !c.is_permanent && daysUntil(c.end_date) < 0;
 
-  const visibleCares = showFinished
-    ? cares
-    : cares.filter((c) => {
-        if (c.isPermanent) return true;
-        if (!c.endDate) return true;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const end = new Date(c.endDate);
-        end.setHours(0, 0, 0, 0);
-        return end.getTime() >= today.getTime();
-      });
+  const finishedCount = cares.filter(isFinished).length;
 
-  const byDog = dogs.map((dog) => ({
-    dog,
-    items: visibleCares.filter((c) => c.dogId === dog.id),
+  const visibleCares = showFinished ? cares : cares.filter((c) => !isFinished(c));
+
+  const byPet = pets.map((pet) => ({
+    pet,
+    items: visibleCares.filter((c) => c.pet_id === pet.id),
   }));
 
   return (
@@ -89,7 +77,7 @@ export default function CaresListScreen({
         </div>
       )}
       <div className="px-5 pt-5">
-        {dogs.length === 0 ? (
+        {pets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
             <Dog size={64} strokeWidth={1.5} />
             <p className="mt-4 text-base text-gray-500 text-center">
@@ -105,20 +93,20 @@ export default function CaresListScreen({
           </div>
         ) : (
           <div className="flex flex-col gap-6">
-            {byDog.map(({ dog, items }) =>
+            {byPet.map(({ pet, items }) =>
               items.length === 0 ? null : (
-                <div key={dog.id}>
+                <div key={pet.id}>
                   <div className="flex items-center gap-2 mb-3">
                     <Dog size={22} className="text-gray-800" />
                     <span className="text-gray-900 text-lg font-bold">
-                      {dog.name}
+                      {pet.name}
                     </span>
                   </div>
                   <div className="flex flex-col gap-3 md:grid md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
                     {items.map((care) => (
                       <div
                         key={care.id}
-                        className={`bg-white rounded-2xl p-4 shadow-sm ${!care.isActive ? "opacity-60" : ""}`}
+                        className={`bg-white rounded-2xl p-4 shadow-sm ${!care.is_active ? "opacity-60" : ""}`}
                       >
                         <div className="flex gap-3">
                           <div
@@ -129,94 +117,72 @@ export default function CaresListScreen({
                           <div className="flex-1 min-w-0">
                             <p className="text-gray-900 text-base font-bold mb-1">
                               {care.type === "otro" &&
-                              care.customTypeDescription
-                                ? care.customTypeDescription
+                              care.custom_type_description
+                                ? care.custom_type_description
                                 : careTypeLabels[care.type]}
                             </p>
                             <div className="flex items-center gap-1 mb-1">
                               <Timer size={13} className="text-gray-500" />
                               <span className="text-gray-700 text-sm">
-                                {care.durationMinutes} minutos
+                                {care.duration_minutes} minutos
                               </span>
                             </div>
                             <div className="flex items-center gap-1 mb-1">
                               <Repeat size={13} className="text-gray-500" />
                               <span className="text-gray-600 text-xs">
-                                {care.timesPerDay}{" "}
-                                {care.timesPerDay === 1 ? "vez" : "veces"} al
+                                {care.times_per_day}{" "}
+                                {care.times_per_day === 1 ? "vez" : "veces"} al
                                 día
                               </span>
                             </div>
-                            {care.scheduledTimes.length > 0 && (
+                            {care.scheduled_times.length > 0 && (
                               <div className="flex items-center gap-1 mb-1">
                                 <Clock size={13} className="text-blue-500" />
                                 <span className="text-blue-600 text-xs">
-                                  {care.scheduledTimes.join(", ")}
+                                  {care.scheduled_times.map(shortTime).join(", ")}
                                 </span>
                               </div>
                             )}
-                            {care.daysOfWeek && care.daysOfWeek.length > 0 && (
+                            {care.days_of_week && care.days_of_week.length > 0 && (
                               <div className="flex items-center gap-1 mb-1">
                                 <Repeat size={13} className="text-indigo-500" />
                                 <span className="text-indigo-600 text-xs">
-                                  {care.daysOfWeek
+                                  {[...care.days_of_week]
                                     .sort((a, b) => {
                                       const order = [1, 2, 3, 4, 5, 6, 0];
-                                      return (
-                                        order.indexOf(a) - order.indexOf(b)
-                                      );
+                                      return order.indexOf(a) - order.indexOf(b);
                                     })
-                                    .map(
-                                      (d) =>
-                                        [
-                                          "Dom",
-                                          "Lun",
-                                          "Mar",
-                                          "Mié",
-                                          "Jue",
-                                          "Vie",
-                                          "Sáb",
-                                        ][d],
-                                    )
+                                    .map((d) => weekDayLabels[d])
                                     .join(", ")}
                                 </span>
                               </div>
                             )}
-                            {!care.isPermanent &&
-                              care.durationDays &&
-                              care.endDate && (
+                            {!care.is_permanent &&
+                              care.duration_days &&
+                              care.end_date && (
                                 <div className="flex items-center gap-1 mb-1">
                                   <Timer size={13} className="text-amber-500" />
                                   <span className="text-amber-700 text-xs">
                                     {(() => {
-                                      const today = new Date();
-                                      today.setHours(0, 0, 0, 0);
-                                      const end = new Date(care.endDate);
-                                      end.setHours(0, 0, 0, 0);
-                                      const diffTime =
-                                        end.getTime() - today.getTime();
-                                      const diffDays = Math.ceil(
-                                        diffTime / (1000 * 60 * 60 * 24),
-                                      );
-                                      if (diffDays < 0) {
-                                        return `Finalizado hace ${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? "día" : "días"}`;
-                                      } else if (diffDays === 0) {
-                                        return "Finaliza hoy";
-                                      } else {
-                                        return `Finaliza en ${diffDays} ${diffDays === 1 ? "día" : "días"}`;
+                                      const days = daysUntil(care.end_date);
+                                      if (days < 0) {
+                                        const past = Math.abs(days);
+                                        return `Finalizado hace ${past} ${past === 1 ? "día" : "días"}`;
                                       }
+                                      if (days === 0) return "Finaliza hoy";
+                                      return `Finaliza en ${days} ${days === 1 ? "día" : "días"}`;
                                     })()}
                                   </span>
                                 </div>
                               )}
-                            {care.notificationTime &&
-                              care.notificationTime !== "none" && (
+                            {care.notification_time &&
+                              care.notification_time !== "none" && (
                                 <div className="flex items-center gap-1">
                                   <Bell size={13} className="text-purple-600" />
                                   <span className="text-purple-600 text-xs">
                                     {
                                       notificationTimeLabels[
-                                        care.notificationTime
+                                        care.notification_time
                                       ]
                                     }
                                   </span>
@@ -228,26 +194,28 @@ export default function CaresListScreen({
                               </p>
                             )}
                           </div>
-                          <div className="flex flex-col gap-2 shrink-0">
-                            <button
-                              onClick={() => onNavigateToAddEdit(care.id)}
-                              className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
-                            >
-                              <Pencil size={15} className="text-indigo-600" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(care.id, dog.name)}
-                              className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
-                            >
-                              <Trash2 size={15} className="text-red-600" />
-                            </button>
-                            <button
-                              onClick={() => toggleCareActive(care.id)}
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center active:scale-90 transition-transform text-xs font-bold ${care.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}
-                            >
-                              {care.isActive ? "ON" : "OFF"}
-                            </button>
-                          </div>
+                          {canWrite && (
+                            <div className="flex flex-col gap-2 shrink-0">
+                              <button
+                                onClick={() => onNavigateToAddEdit(care.id)}
+                                className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
+                              >
+                                <Pencil size={15} className="text-indigo-600" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(care.id, pet.name)}
+                                className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center active:scale-90 transition-transform"
+                              >
+                                <Trash2 size={15} className="text-red-600" />
+                              </button>
+                              <button
+                                onClick={() => update.mutate({ id: care.id, data: { ...care, is_active: !care.is_active } })}
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center active:scale-90 transition-transform text-xs font-bold ${care.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}
+                              >
+                                {care.is_active ? "ON" : "OFF"}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}

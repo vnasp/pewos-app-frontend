@@ -1,71 +1,78 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+
 import "./App.css";
-import { usePwaUpdate } from "./hooks/usePwaUpdate";
-import OnboardingScreen from "./screens/OnboardingScreen";
-import LoginScreen from "./screens/LoginScreen";
 import AppLayout from "./components/AppLayout";
+import Spinner from "./components/ui/Spinner";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { DogsProvider } from "./context/DogsContext";
-import { CalendarProvider } from "./context/CalendarContext";
-import { MedicationProvider } from "./context/MedicationContext";
-import { ExerciseProvider } from "./context/ExerciseContext";
-import { CareProvider } from "./context/CareContext";
-import { MealTimesProvider } from "./context/MealTimesContext";
-import { SharedAccessProvider } from "./context/SharedAccessContext";
-import { VeterinariansProvider } from "./context/VeterinariansContext";
+import { usePwaUpdate } from "./hooks/usePwaUpdate";
+import AuthScreen from "./screens/AuthScreen";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // La app es de uso personal y los datos cambian poco: se evita refetch al enfocar
+      // la ventana, que en una PWA de móvil ocurre constantemente.
+      refetchOnWindowFocus: false,
+      staleTime: 30_000,
+      retry: 1,
+    },
+  },
+});
+
+/**
+ * El onboarding se muestra una sola vez por navegador.
+ *
+ * Antes arrancaba siempre en `true` y no se guardaba nada, así que aparecía en cada
+ * apertura de la app. El acceso va en try/catch porque en modo privado o con las cookies
+ * bloqueadas `localStorage` lanza en vez de devolver null.
+ */
+const ONBOARDING_KEY = "pewos.onboarding.seen";
+
+function hasSeenOnboarding(): boolean {
+  try {
+    return localStorage.getItem(ONBOARDING_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 function AppContent() {
   const { user, loading } = useAuth();
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [seenOnboarding, setSeenOnboarding] = useState(hasSeenOnboarding);
   usePwaUpdate();
 
-  const handleOnboardingContinue = () => {
-    setShowOnboarding(false);
+  const dismissOnboarding = () => {
+    try {
+      localStorage.setItem(ONBOARDING_KEY, "1");
+    } catch {
+      // Sin persistencia se volverá a mostrar; no es motivo para romper el flujo.
+    }
+    setSeenOnboarding(true);
   };
-
-  if (showOnboarding) {
-    return <OnboardingScreen onContinue={handleOnboardingContinue} />;
-  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-svh bg-indigo-600">
-        <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center h-svh bg-brand-gradient">
+        <Spinner tone="light" size="lg" />
       </div>
     );
   }
 
-  if (!user) {
-    return <LoginScreen />;
+  if (user) {
+    return <AppLayout />;
   }
 
-  return (
-    <DogsProvider>
-      <CalendarProvider>
-        <MedicationProvider>
-          <ExerciseProvider>
-            <CareProvider>
-              <MealTimesProvider>
-                <SharedAccessProvider>
-                  <VeterinariansProvider>
-                    <AppLayout />
-                  </VeterinariansProvider>
-                </SharedAccessProvider>
-              </MealTimesProvider>
-            </CareProvider>
-          </ExerciseProvider>
-        </MedicationProvider>
-      </CalendarProvider>
-    </DogsProvider>
-  );
+  // Quien ya vio la intro entra con el drawer arriba y no tiene que tocar nada.
+  return <AuthScreen startOpen={seenOnboarding} onOpen={dismissOnboarding} />;
 }
 
-function App() {
+export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
-
-export default App;

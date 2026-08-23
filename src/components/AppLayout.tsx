@@ -1,73 +1,49 @@
-import { useState, useEffect } from "react";
-import Header from "./Header";
-import TabBar from "./TabBar";
-import InstallBanner from "./InstallBanner";
+import { useEffect, useState } from "react";
+
+import { useAuth } from "../context/AuthContext";
+import { usePets } from "../hooks/queries";
 import { useNotificationScheduler } from "../hooks/useNotificationScheduler";
+import { useTodayEvents } from "../hooks/useTodayEvents";
 import { usePushSubscription } from "../hooks/usePushSubscription";
+import { addActionFor, titleFor } from "../navigation";
+import type { SubScreen, Tab } from "../navigation";
 import { requestNotificationPermission } from "../utils/notifications";
+import { today } from "../utils/date";
+import AddSheet from "./AddSheet";
+import Header from "./Header";
+import PetFilterTabs from "./home/PetFilterTabs";
+import InstallBanner from "./InstallBanner";
+import TabBar from "./TabBar";
+import Fab from "./ui/Fab";
 
 // Screens
-import HomeScreen from "../screens/HomeScreen";
-import DogsListScreen from "../screens/DogsListScreen";
-import AddEditDogScreen from "../screens/AddEditDogScreen";
-import CalendarListScreen from "../screens/CalendarListScreen";
 import AddEditAppointmentScreen from "../screens/AddEditAppointmentScreen";
-import MedicationsListScreen from "../screens/MedicationsListScreen";
-import AddEditMedicationScreen from "../screens/AddEditMedicationScreen";
-import ExercisesListScreen from "../screens/ExercisesListScreen";
-import AddEditExerciseScreen from "../screens/AddEditExerciseScreen";
-import CaresListScreen from "../screens/CaresListScreen";
 import AddEditCareScreen from "../screens/AddEditCareScreen";
-import MealTimesSettingsScreen from "../screens/MealTimesSettingsScreen";
-import SharedAccessScreen from "../screens/SharedAccessScreen";
-import SettingsScreen from "../screens/SettingsScreen";
-import VeterinariansListScreen from "../screens/VeterinariansListScreen";
+import AddEditExerciseScreen from "../screens/AddEditExerciseScreen";
+import AddEditMedicationScreen from "../screens/AddEditMedicationScreen";
+import AddEditPetScreen from "../screens/AddEditPetScreen";
 import AddEditVeterinarianScreen from "../screens/AddEditVeterinarianScreen";
-
-type Tab = "home" | "pets" | "appointments" | "settings";
-
-type SubScreen =
-  | { kind: "none" }
-  | { kind: "addEditDog"; dogId?: string }
-  | { kind: "addEditAppointment"; appointmentId?: string }
-  | { kind: "addEditMedication"; medicationId?: string }
-  | { kind: "addEditExercise"; exerciseId?: string }
-  | { kind: "addEditCare"; careId?: string }
-  | { kind: "mealTimes" }
-  | { kind: "sharedAccess" }
-  | { kind: "medications" }
-  | { kind: "exercises" }
-  | { kind: "cares" }
-  | { kind: "veterinarians" }
-  | { kind: "addEditVeterinarian"; veterinarianId?: string };
-
-const screenTitles: Record<Tab, { title1: string; title2: string }> = {
-  home: { title1: "Recordatorios", title2: "de Hoy" },
-  pets: { title1: "Mis", title2: "Mascotas" },
-  appointments: { title1: "Agenda", title2: "Mascotas" },
-  settings: { title1: "Mis", title2: "Ajustes" },
-};
-
-const subScreenTitles: Partial<
-  Record<SubScreen["kind"], { title1: string; title2: string }>
-> = {
-  addEditDog: { title1: "Mascota", title2: "" },
-  addEditAppointment: { title1: "Nueva", title2: "Cita" },
-  addEditMedication: { title1: "Medica-", title2: "mento" },
-  addEditExercise: { title1: "Rutina de", title2: "Ejercicio" },
-  addEditCare: { title1: "Cuidado", title2: "Operatorios" },
-  mealTimes: { title1: "Horarios de", title2: "Comida" },
-  sharedAccess: { title1: "Acceso", title2: "Compartido" },
-  medications: { title1: "Medica-", title2: "mentos" },
-  exercises: { title1: "Rutinas de", title2: "Ejercicio" },
-  cares: { title1: "Cuidados", title2: "Operatorios" },
-  veterinarians: { title1: "Veteri-", title2: "narios" },
-  addEditVeterinarian: { title1: "Veteri-", title2: "nario" },
-};
+import CalendarListScreen from "../screens/CalendarListScreen";
+import CaresListScreen from "../screens/CaresListScreen";
+import ExercisesListScreen from "../screens/ExercisesListScreen";
+import HomeScreen from "../screens/HomeScreen";
+import MealTimesSettingsScreen from "../screens/MealTimesSettingsScreen";
+import MedicationsListScreen from "../screens/MedicationsListScreen";
+import PetsListScreen from "../screens/PetsListScreen";
+import SettingsScreen from "../screens/SettingsScreen";
+import TenantMembersScreen from "../screens/TenantMembersScreen";
+import VeterinariansListScreen from "../screens/VeterinariansListScreen";
 
 export default function AppLayout() {
+  const { canWrite } = useAuth();
   const [currentTab, setCurrentTab] = useState<Tab>("home");
   const [subScreen, setSubScreen] = useState<SubScreen>({ kind: "none" });
+  const [addSheetOpen, setAddSheetOpen] = useState(false);
+  // El filtro de mascota se dibuja sobre el degradado, que es del header, pero filtra la
+  // lista de Hoy. Por eso el estado y la derivación viven aquí y bajan como props.
+  const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
+  const { items: pets } = usePets();
+  const { events, isLoading: loadingEvents } = useTodayEvents();
 
   // Pedir permiso de notificación al montar y programar notificaciones de hoy
   useEffect(() => {
@@ -77,85 +53,52 @@ export default function AppLayout() {
   usePushSubscription(); // Web Push (iOS Safari + Android background)
 
   const isSubScreen = subScreen.kind !== "none";
+  const back = () => setSubScreen({ kind: "none" });
 
-  const handleTabNavigate = (tab: string) => {
+  const handleTabNavigate = (tab: Tab) => {
     setSubScreen({ kind: "none" });
-    setCurrentTab(tab as Tab);
+    setCurrentTab(tab);
   };
 
-  const handleBack = () => setSubScreen({ kind: "none" });
-
-  let title1 = screenTitles[currentTab].title1;
-  let title2 = screenTitles[currentTab].title2;
-  if (isSubScreen && subScreenTitles[subScreen.kind]) {
-    title1 = subScreenTitles[subScreen.kind]!.title1;
-    title2 = subScreenTitles[subScreen.kind]!.title2;
-  }
-
-  const showAddForTab =
-    !isSubScreen && (currentTab === "pets" || currentTab === "appointments");
-  const showAddForSub =
-    subScreen.kind === "medications" ||
-    subScreen.kind === "exercises" ||
-    subScreen.kind === "cares" ||
-    subScreen.kind === "veterinarians";
-
+  const addAction = canWrite ? addActionFor(currentTab, subScreen) : null;
   const handleAdd = () => {
-    if (currentTab === "pets") setSubScreen({ kind: "addEditDog" });
-    else if (currentTab === "appointments")
-      setSubScreen({ kind: "addEditAppointment" });
-  };
-  const handleAddSub = () => {
-    if (subScreen.kind === "medications")
-      setSubScreen({ kind: "addEditMedication" });
-    else if (subScreen.kind === "exercises")
-      setSubScreen({ kind: "addEditExercise" });
-    else if (subScreen.kind === "cares") setSubScreen({ kind: "addEditCare" });
-    else if (subScreen.kind === "veterinarians")
-      setSubScreen({ kind: "addEditVeterinarian" });
+    if (addAction === "choose") setAddSheetOpen(true);
+    else if (addAction) setSubScreen(addAction);
   };
 
   const renderContent = () => {
     switch (subScreen.kind) {
-      case "addEditDog":
-        return (
-          <AddEditDogScreen
-            dogId={subScreen.dogId}
-            onNavigateBack={handleBack}
-          />
-        );
+      case "addEditPet":
+        return <AddEditPetScreen petId={subScreen.petId} onNavigateBack={back} />;
       case "addEditAppointment":
         return (
           <AddEditAppointmentScreen
             appointmentId={subScreen.appointmentId}
-            onNavigateBack={handleBack}
+            onNavigateBack={back}
           />
         );
       case "addEditMedication":
         return (
           <AddEditMedicationScreen
             medicationId={subScreen.medicationId}
-            onNavigateBack={handleBack}
+            onNavigateBack={back}
           />
         );
       case "addEditExercise":
         return (
           <AddEditExerciseScreen
             exerciseId={subScreen.exerciseId}
-            onNavigateBack={handleBack}
+            onNavigateBack={back}
           />
         );
       case "addEditCare":
         return (
-          <AddEditCareScreen
-            careId={subScreen.careId}
-            onNavigateBack={handleBack}
-          />
+          <AddEditCareScreen careId={subScreen.careId} onNavigateBack={back} />
         );
       case "mealTimes":
         return <MealTimesSettingsScreen />;
-      case "sharedAccess":
-        return <SharedAccessScreen />;
+      case "members":
+        return <TenantMembersScreen />;
       case "medications":
         return (
           <MedicationsListScreen
@@ -192,7 +135,7 @@ export default function AppLayout() {
         return (
           <AddEditVeterinarianScreen
             veterinarianId={subScreen.veterinarianId}
-            onNavigateBack={handleBack}
+            onNavigateBack={back}
           />
         );
     }
@@ -201,22 +144,16 @@ export default function AppLayout() {
       case "home":
         return (
           <HomeScreen
-            onNavigateToMedications={() =>
-              setSubScreen({ kind: "medications" })
-            }
-            onNavigateToCalendar={() => {
-              setSubScreen({ kind: "none" });
-              setCurrentTab("appointments");
-            }}
-            onNavigateToExercises={() => setSubScreen({ kind: "exercises" })}
-            onNavigateToCares={() => setSubScreen({ kind: "cares" })}
+            events={events}
+            isLoading={loadingEvents}
+            selectedPetId={selectedPetId}
           />
         );
       case "pets":
         return (
-          <DogsListScreen
+          <PetsListScreen
             onNavigateToAddEdit={(id) =>
-              setSubScreen({ kind: "addEditDog", dogId: id })
+              setSubScreen({ kind: "addEditPet", petId: id })
             }
             onNavigateToMealTimes={() => setSubScreen({ kind: "mealTimes" })}
           />
@@ -233,12 +170,8 @@ export default function AppLayout() {
         return (
           <SettingsScreen
             onNavigateToMealTimes={() => setSubScreen({ kind: "mealTimes" })}
-            onNavigateToSharedAccess={() =>
-              setSubScreen({ kind: "sharedAccess" })
-            }
-            onNavigateToMedications={() =>
-              setSubScreen({ kind: "medications" })
-            }
+            onNavigateToMembers={() => setSubScreen({ kind: "members" })}
+            onNavigateToMedications={() => setSubScreen({ kind: "medications" })}
             onNavigateToExercises={() => setSubScreen({ kind: "exercises" })}
             onNavigateToCares={() => setSubScreen({ kind: "cares" })}
           />
@@ -246,32 +179,56 @@ export default function AppLayout() {
     }
   };
 
+  const isHome = !isSubScreen && currentTab === "home";
+
+  const countByPet = events.reduce<Record<string, number>>((acc, ev) => {
+    acc[ev.data.pet_id] = (acc[ev.data.pet_id] ?? 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <div className="flex flex-col h-svh w-full overflow-hidden">
       <InstallBanner />
 
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-        {/* Sidebar para desktop */}
         <TabBar
-          currentScreen={currentTab}
+          currentTab={currentTab}
           onNavigate={handleTabNavigate}
           className="order-2 lg:order-1"
         />
 
-        {/* Contenido principal */}
-        <div className="flex flex-col flex-1 overflow-hidden order-1 lg:order-2">
+        <div className="relative flex flex-col flex-1 overflow-hidden order-1 lg:order-2">
           <Header
-            title1={title1}
-            title2={title2}
-            showAddButton={showAddForTab || showAddForSub}
-            onAddPress={showAddForSub ? handleAddSub : handleAdd}
-            onVetPress={() => setSubScreen({ kind: "veterinarians" })}
-          />
-          <main className="flex-1 bg-white rounded-t-[30px] lg:rounded-t-[40px] -mt-7.5 overflow-y-auto relative z-10 lg:max-w-6xl lg:mx-auto lg:w-full">
+            title={titleFor(currentTab, subScreen)}
+            date={isHome ? today() : undefined}
+            onBack={isSubScreen ? back : undefined}
+            onVetPress={
+              isSubScreen ? undefined : () => setSubScreen({ kind: "veterinarians" })
+            }
+          >
+            {isHome && (
+              <PetFilterTabs
+                pets={pets}
+                selectedPetId={selectedPetId}
+                onSelect={setSelectedPetId}
+                totalCount={events.length}
+                countByPet={countByPet}
+              />
+            )}
+          </Header>
+          <main className="flex-1 bg-white rounded-t-sheet -mt-6 overflow-y-auto relative z-10 lg:max-w-6xl lg:mx-auto lg:w-full">
             {renderContent()}
           </main>
+
+          {addAction && <Fab onClick={handleAdd} label="Agregar" />}
         </div>
       </div>
+
+      <AddSheet
+        open={addSheetOpen}
+        onClose={() => setAddSheetOpen(false)}
+        onSelect={setSubScreen}
+      />
     </div>
   );
 }

@@ -1,26 +1,59 @@
 @import "tailwindcss";
 
-:root {
-  --background: #4f39f6;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --font-sans: "Montserrat", sans-serif;
+@theme {
+  --font-sans: "Manrope", system-ui, sans-serif;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
-  --font-weight-semibold: 600;
   --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Marca — el degradado "índigo nocturno" va aparte, como @utility */
+  --color-brand: #4338ca;
+  --color-brand-dark: #312e81;
+  --color-brand-bright: #7c3aed;
+  --color-brand-soft: #eef0fe;
 
-  --color-primary: #cfe1f3; /* Background botones secundarios */
-  --color-primaryLight: #eef4fa; /* Base en tablas, menús, formularios, etc... */
-  --color-primaryDark: #143351; /* Todo lo que es texto y texto en botones */
-  --color-primaryInactive: #8198af; /* Texto en botones inactivos */
-  --color-secondary: #ff7373; /* Activo (botones o texto) */
+  /* Neutros con tinte violeta, para que no choquen con la marca */
+  --color-ink: #191233;
+  --color-muted: #635e75;
+  --color-subtle: #9b95ab;
+  --color-line: #efedf5;
+  --color-canvas: #f7f6fb;
+
+  /* Categorías de recordatorio. Cuidados es naranja y no rosa: con el rosa de
+     Medicamentos eran indistinguibles en una lista mixta. */
+  --color-med: #c2255c;
+  --color-med-soft: #fdecef;
+  --color-exercise: #12854e;
+  --color-exercise-soft: #e7f8ef;
+  --color-care: #c2410c;
+  --color-care-soft: #fff0ea;
+  --color-appointment: #1b5fcb;
+  --color-appointment-soft: #eaf1fe;
+
+  --color-success: #12854e;
+  --color-success-soft: #e7f8ef;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fee2e2;
+
+  --radius-card: 1rem;
+  --radius-sheet: 1.5rem;
+  --radius-tile: 0.875rem;
+
+  --shadow-card: 0 4px 16px rgba(30, 20, 70, 0.08);
+  --shadow-float: 0 5px 22px rgba(40, 20, 90, 0.17);
+  --shadow-fab: 0 6px 18px rgba(49, 46, 129, 0.45);
+}
+
+/* Un degradado de tres paradas no se puede expresar como token de color. */
+@utility bg-brand-gradient {
+  background-image: linear-gradient(
+    150deg,
+    #312e81 0%,
+    #4338ca 50%,
+    #7c3aed 100%
+  );
 }
 
 #root {
@@ -39,7 +72,7 @@
 }
 
 body {
-  @apply bg-background text-foreground font-sans;
+  @apply bg-brand-dark text-ink font-sans;
   font-weight: 500;
 }
 
