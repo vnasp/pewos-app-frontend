@@ -1,125 +1,128 @@
-# Pewos — Agenda para Mascotas
+# Pewos — Agenda colaborativa para mascotas
 
-Aplicación web responsive para gestionar la agenda de tus mascotas: medicaciones,
-ejercicios, cuidados post-operatorios, horarios de comida, citas veterinarias y calendario.
+Aplicación web responsive para la gestión colaborativa del cuidado de mascotas senior o con alguna enfermedad. Permite organizar medicaciones, alimentación, ejercicios, cuidados, controles veterinarios y recordatorios dentro de un grupo compartido, manteniendo la información centralizada y sincronizada entre sus integrantes.
 
-Es el frontend de [`pewos-app-backend`](../pewos-api) (FastAPI + PostgreSQL), que se encarga de la
-autenticación y los datos.
+Este repositorio contiene el frontend de Pewos, desarrollado con React, TypeScript y Tailwind CSS. Consume una API propia desarrollada con FastAPI y PostgreSQL.
 
-> Proyecto personal en desarrollo. Necesita `pewos-app-backend` corriendo para funcionar.
+> Proyecto personal en constante desarrollo.
 
-## Grupos, integrantes y roles
+## Arquitectura
 
-Los datos no pertenecen a una persona sino a un **grupo** (una casa, una familia). Cada usuario
-puede pertenecer a varios grupos y trabaja sobre uno activo a la vez; el selector aparece en
-Ajustes cuando hay más de uno.
+Pewos utiliza una arquitectura desacoplada:
 
-| Rol | Puede |
-|---|---|
-| `owner` | Todo, más administrar integrantes, roles e invitaciones |
-| `member` | Crear, editar y borrar; marcar recordatorios como hechos |
-| `viewer` | Solo lectura |
+```text
+Usuario
+   ↓
+React + TypeScript + Tailwind
+   ↓
+CloudFront
+   ├── /        → S3 (Frontend)
+   └── /api/*   → EC2 (FastAPI)
+                    ↓
+                 Docker
+              ┌─────┴─────┐
+              ↓           ↓
+           FastAPI    PostgreSQL
+              ↓
+        S3 (imágenes)
+```
 
-Para sumar a alguien, el `owner` genera un **código de invitación** desde "Mi grupo" (con rol y
-expiración) y la otra persona lo canjea desde esa misma pantalla. No hace falta correo.
+El frontend y la API se exponen bajo el mismo dominio. CloudFront enruta las solicitudes de `/api/*` hacia el backend, mientras que la aplicación estática se sirve desde S3.
 
-La **zona horaria es del grupo**, no de cada integrante: la mascota está físicamente en una casa
-y esa casa tiene un solo huso. Un medicamento de las 08:00 se da a las 08:00 de esa casa, viva
-donde viva quien mira la app.
+Las imágenes de las mascotas se almacenan en S3 mediante URLs prefirmadas generadas por la API.
+
+## Multi-tenancy
+
+Los datos no pertenecen directamente a una persona, sino a un **grupo** que representa, por ejemplo, una familia o un hogar.
+
+Cada usuario puede pertenecer a varios grupos y trabaja sobre uno activo a la vez.
+
+```text
+Grupo
+├── Integrantes
+├── Mascotas
+├── Alimentación
+├── Medicaciones
+├── Ejercicios
+├── Cuidados
+└── Controles veterinarios
+```
+
+### Roles
+
+| Rol      | Permisos                                                      |
+| -------- | ------------------------------------------------------------- |
+| `owner`  | Control total, incluyendo integrantes, roles e invitaciones   |
+| `member` | Crear, editar y eliminar información; completar recordatorios |
+| `viewer` | Acceso de solo lectura                                        |
+
+Los integrantes pueden ser incorporados mediante códigos de invitación configurados con un rol y fecha de expiración.
+
+La zona horaria pertenece al grupo y no al usuario individual. Esto permite que los horarios de cuidado se interpreten según la ubicación física donde se encuentra la mascota.
 
 ## Funcionalidades
 
-- Mascotas con perfil y foto (subida directa a S3 con URL prefirmada)
-- Calendario de citas con recurrencias (diaria, semanal, quincenal, mensual)
-- Medicamentos por frecuencia horaria o asociados a horarios de comida
-- Rutinas de ejercicio y cuidados post-operatorios (con días de la semana)
-- Horarios de comida configurables y reordenables, por grupo
-- Directorio de veterinarios
-- Marcado de recordatorios con atribución ("lo marcó Ana")
+- Perfiles de mascotas con fotografía.
+- Gestión de medicaciones y recordatorios.
+- Horarios de alimentación configurables y reordenables.
+- Rutinas de ejercicio.
+- Cuidados y seguimiento postoperatorio.
+- Calendario de citas y eventos recurrentes.
+- Directorio de veterinarios.
+- Registro de cumplimiento de recordatorios con atribución al integrante que realizó la acción.
+- Gestión colaborativa entre integrantes de un mismo grupo.
+- Cambio entre múltiples grupos asociados a un usuario.
 
 ## Tecnologías
 
-- React 19 + TypeScript
-- TanStack Query v5 (estado de servidor) + un `AuthContext` delgado
-- Vite 7 + Tailwind CSS 4
-- Lucide React (iconos)
+- React 19
+- TypeScript
+- Vite 7
+- Tailwind CSS 4
+- TanStack Query v5
+- Lucide React
 
-No hay librería de estado global: todo lo que viene del servidor vive en la caché de TanStack
-Query, y **toda clave de consulta incluye el grupo activo**, de modo que cambiar de grupo no
-deja datos del anterior en pantalla.
+### Gestión de estado
 
-## Configuración local
+La información proveniente de la API se administra mediante TanStack Query. No se utiliza una librería global de estado adicional para los datos del servidor.
 
-1. Levantar la API:
+`AuthContext` mantiene únicamente información relacionada con:
 
-```bash
-cd ../pewos-api
-docker compose up -d
+- Sesión.
+- Usuario autenticado.
+- Grupo activo.
+- Rol.
+- Permisos de escritura.
+
+Todas las claves de consulta incluyen el grupo activo para evitar que los datos de un grupo permanezcan visibles al cambiar a otro.
+
+## Despliegue
+
+El frontend se despliega automáticamente mediante GitHub Actions.
+
+```text
+GitHub Actions
+      ↓
+OIDC
+      ↓
+S3
+      ↓
+Invalidación CloudFront
 ```
 
-2. Copiar `.env.example` a `.env` y ajustar si hace falta:
+Se utiliza autenticación OIDC con AWS, evitando almacenar credenciales de acceso estáticas en GitHub.
 
-```bash
-cp .env.example .env
-```
+## Backend
 
-`VITE_API_URL=/api` es lo normal: en desarrollo el dev server de Vite hace proxy de `/api` a
-`http://localhost:8000`, y en producción CloudFront enruta `/api/*` al origen EC2. En ambos
-casos el frontend y la API comparten dominio, así que las cookies de sesión son same-origin y no
-hay CORS.
+La API está desarrollada con:
 
-3. Instalar dependencias y arrancar:
+- FastAPI
+- PostgreSQL
+- SQLAlchemy
+- Alembic
+- Docker
+- Amazon S3
+- Amazon ECR
+- Amazon EC2
 
-```bash
-npm install
-npm run dev
-```
-
-## Verificación
-
-```bash
-npm run build   # tsc -b + vite build
-npm run lint
-```
-
-## Estructura del Proyecto
-
-```
-pewos-app-frontend/
-├── public/assets/
-├── src/
-│   ├── api/
-│   │   ├── client.ts        # fetch con cookies + refresh single-flight ante 401
-│   │   └── index.ts         # un módulo tipado por recurso
-│   ├── components/
-│   │   ├── AppLayout.tsx    # tabs, subpantallas y gating del botón "+"
-│   │   ├── Header.tsx
-│   │   ├── TabBar.tsx
-│   │   ├── calendar/
-│   │   └── home/
-│   ├── constants/
-│   │   └── labels.ts        # etiquetas y colores de presentación
-│   ├── context/
-│   │   └── AuthContext.tsx  # sesión, grupo activo, rol, canWrite
-│   ├── hooks/
-│   │   └── queries.ts       # useQuery/useMutation por recurso
-│   ├── pages/
-│   ├── types/index.ts       # espejo de los schemas del backend
-│   ├── utils/
-│   │   ├── date.ts          # fechas ISO sin el corrimiento de UTC
-│   │   └── schedule.ts      # reparto de horarios en el día
-│   ├── App.tsx
-│   └── main.tsx
-├── vite.config.ts
-└── package.json
-```
-
-### Convenciones de fecha y hora
-
-La API habla ISO: las fechas son `"YYYY-MM-DD"` y las horas `"HH:MM:SS"`. Dos reglas para no
-repetir bugs viejos:
-
-- Nunca `new Date("2026-08-21")` — eso es medianoche **UTC** y en GMT-X muestra el día anterior.
-  Usar `parseLocalDate` de `utils/date.ts`, o comparar las cadenas directamente, que ordenan
-  bien por ser ISO.
-- Para mostrar horas, `shortTime()` recorta los segundos.
+El backend se despliega mediante GitHub Actions utilizando OIDC, ECR y AWS Systems Manager. La imagen Docker de la API se construye en el pipeline, se publica en ECR y posteriormente se actualiza en EC2.

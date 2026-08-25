@@ -132,7 +132,7 @@ function AuthDrawer({
       >
         <span className="block w-9 h-1 rounded-full bg-line" />
       </button>
-      <div className="px-6 pb-[calc(2rem+env(safe-area-inset-bottom))] lg:max-w-md lg:mx-auto">
+      <div className="px-6 pb-[calc(2rem+env(safe-area-inset-bottom))]">
         {children}
       </div>
     </div>
