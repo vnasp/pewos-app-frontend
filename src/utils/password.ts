@@ -17,3 +17,16 @@ export const passwordCriteria = [
 export function isPasswordStrong(password: string): boolean {
   return passwordCriteria.every((c) => c.regex.test(password));
 }
+
+/**
+ * Los criterios que faltan, en minúscula y listos para una frase.
+ *
+ * El indicador ya los marca uno a uno, pero al enviar hace falta decirlo otra vez: cuatro
+ * de cinco en verde y la barra en "Buena" se leen como que está todo bien, y un mensaje
+ * que solo dice "no cumple los requisitos" deja a quien registra sin saber cuál falta.
+ */
+export function missingPasswordCriteria(password: string): string[] {
+  return passwordCriteria
+    .filter((c) => !c.regex.test(password))
+    .map((c) => c.text.replace("Mín. ", "mínimo ").toLowerCase());
+}
