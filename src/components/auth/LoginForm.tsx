@@ -3,7 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 
 import PasswordStrengthIndicator from "../PasswordStrengthIndicator";
 import { useAuth } from "../../context/AuthContext";
-import { isPasswordStrong } from "../../utils/password";
+import { missingPasswordCriteria } from "../../utils/password";
 
 type Mode = "login" | "register";
 
@@ -30,9 +30,12 @@ function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
-    if (mode === "register" && !isPasswordStrong(password)) {
-      setError("La contraseña no cumple los requisitos de seguridad");
-      return;
+    if (mode === "register") {
+      const missing = missingPasswordCriteria(password);
+      if (missing.length > 0) {
+        setError(`A la contraseña le falta: ${missing.join(", ")}.`);
+        return;
+      }
     }
     setError(null);
     setLoading(true);
